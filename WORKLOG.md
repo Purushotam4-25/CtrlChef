@@ -5,6 +5,22 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Low-stock forecast + manager analytics
+
+Two more roadmap items done: `getStockForecast` (rolling average
+consumption per ingredient from order history → predicted days-to-stockout,
+an honest heuristic, not ML) and manager analytics (`getSalesAnalytics` —
+by dish/hour/day-of-week/staff, top/bottom 5; `getTableTurnoverStats` — avg
+time a table's occupied, grouped by capacity since real party size isn't
+tracked). Ingredients now carry a synced `lowStock` flag, but the actual
+alert UI is left for the frontend — the data's already there. `closeOrder`
+now stamps `closedAt`, which turnover math needed and didn't have before.
+33 test cases across 4 suites, all passing, plus a manual run against the
+real seeded restaurant. Deliberately skipped the Gemini assistant — that
+needs external API keys and a scope conversation first, not built yet.
+
+---
+
 ## 2026-07-25 — Code review fixes
 
 `/code-review` on the previous two entries' work turned up 3 real bugs

@@ -9,7 +9,9 @@
     "logs": "firebase functions:log",
     "seed": "node seed.js",
     "test:rules": "node test-rules.js",
-    "test:auth": "node test-auth.js"
+    "test:auth": "node test-auth.js",
+    "test:forecast": "node test-forecast.js",
+    "test:analytics": "node test-analytics.js"
   },
   "engines": {
     "node": "24"

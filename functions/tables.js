@@ -73,7 +73,7 @@ exports.closeOrder = onCall(async (request) => {
       throw new HttpsError("not-found", `Table ${order.tableId} not found`);
     }
 
-    t.update(orderRef, { status: "closed" });
+    t.update(orderRef, { status: "closed", closedAt: FieldValue.serverTimestamp() });
     t.update(tableRef, { status: "needs_cleaning" });
     return { orderId, tableStatus: "needs_cleaning" };
   });

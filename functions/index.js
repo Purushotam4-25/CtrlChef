@@ -10,6 +10,8 @@ initializeApp();
 const orders = require("./orders");
 const tickets = require("./tickets");
 const tables = require("./tables");
+const forecast = require("./forecast");
+const analytics = require("./analytics");
 
 exports.addOrderItem = orders.addOrderItem;
 exports.cancelOrderItem = orders.cancelOrderItem;
@@ -17,3 +19,6 @@ exports.advanceOrderItemStatus = tickets.advanceOrderItemStatus;
 exports.seatTable = tables.seatTable;
 exports.closeOrder = tables.closeOrder;
 exports.markTableClean = tables.markTableClean;
+exports.getStockForecast = forecast.getStockForecast;
+exports.getSalesAnalytics = analytics.getSalesAnalytics;
+exports.getTableTurnoverStats = analytics.getTableTurnoverStats;

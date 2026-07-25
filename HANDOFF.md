@@ -42,12 +42,29 @@ ingredient reads, manager-only menu/inventory edits, `available` and
 `currentStock` never hand-editable, queue check-ins need a sane party
 size), and every Cloud Function checks the caller's staff role before
 doing anything — `addOrderItem` also now records `createdBy` from the
-verified `request.auth.uid`, not a client-supplied field. Tested with
-`npm run test:rules` and `npm run test:auth` (both need the emulators
-running — see each file's header comment for which ones).
+verified `request.auth.uid`, not a client-supplied field.
+
+Manager-facing analytics/forecasting is in too: `functions/forecast.js`
+(`getStockForecast` — rolling average consumption per ingredient from
+order history, predicted days-to-stockout, honest heuristic not ML) and
+`functions/analytics.js` (`getSalesAnalytics` — by dish/hour/day-of-week/
+staff, top sellers/slow movers; `getTableTurnoverStats` — avg time a table
+stays open, grouped by table *capacity* since actual party size isn't
+tracked anywhere in the schema, a deliberate stand-in not a gap). Both
+manager-only. Ingredients now carry a `lowStock` boolean kept in sync with
+`currentStock` (mirrors how `available` works on dishes) — the actual
+"alert" UI is a frontend listener job, not something built here, since the
+data's already there and staff-readable. `closeOrder` now stamps
+`closedAt`, needed for the turnover math.
+
+Tested with `npm run test:rules`, `test:auth`, `test:forecast`, and
+`test:analytics` (33 cases total, all passing — need the emulators running,
+see each file's header comment for which ones), plus a manual end-to-end
+spot check against the real seeded restaurant data.
 
 Frontend side is still just the default scaffold — no app code, no auth
-wired up in a client yet.
+wired up in a client yet. Gemini assistant (Platinum) deliberately not
+started — needs external API keys and a decision on scope first.
 
 Run emulators with `firebase emulators:start` from the repo root. Run
 `npm install` inside `functions/` first, it's not committed.
@@ -145,3 +162,28 @@ Cloud Function auth guards have a repeatable check the way the rules
 already did. All of it verified against the emulators again afterward:
 `test:rules` (14 cases), `test:auth` (12 cases), plus manual spot-checks
 on each of the 3 bug fixes specifically.
+
+### 2026-07-25 — Low-stock forecast + manager analytics
+Two Gold/Platinum-tier pieces from the roadmap, deliberately skipping the
+Gemini assistant per instruction (needs external API keys and a scope
+decision first — parked for a separate conversation). `functions/orders.js`
+now keeps a `lowStock` boolean on every ingredient in sync with
+`currentStock` (same pattern as `available` on dishes) — didn't build any
+alert-delivery mechanism since the data's already staff-readable and a
+real-time badge/toast is a frontend listener concern, not a function.
+`functions/forecast.js` (`getStockForecast`) derives a rolling average
+daily consumption per ingredient from order history and a predicted
+days-to-stockout, explicitly framed as a heuristic, not ML, matching the
+spec's own honesty framing. `functions/analytics.js` adds
+`getSalesAnalytics` (by dish/hour/day-of-week/staff, top-5/bottom-5) and
+`getTableTurnoverStats` (avg time a table stays open) — the latter needed
+a `closedAt` timestamp added to `closeOrder`, which didn't exist before.
+Turnover groups by table *capacity* rather than actual party size, since
+party size isn't tracked anywhere in the schema — a deliberate simplification,
+flagged rather than silently assumed. All four new/changed pieces got
+hand-calculable tests (`test:forecast`, `test:analytics` — order fixtures
+written directly so expected totals could be worked out by hand and
+checked against the real output), 33 cases total across all four suites,
+all passing, plus a manual end-to-end run against the real seeded
+restaurant to sanity-check the numbers look right outside the test
+fixtures too.

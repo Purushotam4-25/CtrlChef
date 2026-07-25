@@ -1,7 +1,7 @@
 const { randomUUID } = require("crypto");
 const { onCall, HttpsError } = require("firebase-functions/https");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
-const { computeAvailable } = require("./lib/availability");
+const { computeAvailable, computeLowStock } = require("./lib/availability");
 const { requireStaffRole, WAITER_OR_MANAGER } = require("./lib/auth");
 
 const db = getFirestore();
@@ -74,7 +74,10 @@ exports.addOrderItem = onCall(async (request) => {
     for (const req of dish.ingredients) {
       const ingredient = ingredientsById[req.ingredientId];
       const newStock = ingredient.currentStock - req.qtyRequired * qty;
-      t.update(ingredientsRef.doc(req.ingredientId), { currentStock: newStock });
+      t.update(ingredientsRef.doc(req.ingredientId), {
+        currentStock: newStock,
+        lowStock: computeLowStock({ currentStock: newStock, lowStockThreshold: ingredient.lowStockThreshold }),
+      });
       ingredient.currentStock = newStock; // keep local copy in sync for the recompute below
     }
 
@@ -173,7 +176,10 @@ exports.cancelOrderItem = onCall(async (request) => {
     for (const req of dish.ingredients) {
       const ingredient = ingredientsById[req.ingredientId];
       const restored = ingredient.currentStock + req.qtyRequired * item.qty;
-      t.update(ingredientsRef.doc(req.ingredientId), { currentStock: restored });
+      t.update(ingredientsRef.doc(req.ingredientId), {
+        currentStock: restored,
+        lowStock: computeLowStock({ currentStock: restored, lowStockThreshold: ingredient.lowStockThreshold }),
+      });
       ingredient.currentStock = restored;
     }
 

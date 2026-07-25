@@ -5,7 +5,7 @@
 process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "localhost:8080";
 
 const admin = require("firebase-admin");
-const { computeAvailable } = require("./lib/availability");
+const { computeAvailable, computeLowStock } = require("./lib/availability");
 
 admin.initializeApp({ projectId: "ctrlchef-b8ba2" });
 const db = admin.firestore();
@@ -84,6 +84,7 @@ async function seed() {
       unit: ing.unit,
       currentStock: ing.currentStock,
       lowStockThreshold: ing.lowStockThreshold,
+      lowStock: computeLowStock(ing),
       lastRestockedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }

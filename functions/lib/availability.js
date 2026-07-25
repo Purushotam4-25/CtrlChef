@@ -7,4 +7,10 @@ function computeAvailable(requiredIngredients, ingredientsById) {
   });
 }
 
-module.exports = { computeAvailable };
+// Same idea as computeAvailable, but per-ingredient: has stock dropped to
+// (or below) the manager-set threshold.
+function computeLowStock(ingredient) {
+  return ingredient.currentStock <= ingredient.lowStockThreshold;
+}
+
+module.exports = { computeAvailable, computeLowStock };
