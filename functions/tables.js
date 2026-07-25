@@ -38,6 +38,9 @@ exports.seatTable = onCall(async (request) => {
 // early would silently orphan whatever's still on the kitchen ticket (its
 // reserved stock included), so this refuses instead. Use cancelOrderItem
 // first for anything that hasn't started cooking, or wait for the rest.
+// Also returns the final bill breakdown — billing is display-only per the
+// spec, so this is just totalAmount plus the restaurant's configured
+// service charge / GST percentages, nothing new to compute elsewhere.
 exports.closeOrder = onCall(async (request) => {
   const { restaurantId, orderId } = request.data;
   if (!restaurantId || !orderId) {
@@ -68,14 +71,24 @@ exports.closeOrder = onCall(async (request) => {
     }
 
     const tableRef = restaurantRef.collection("tables").doc(order.tableId);
-    const tableSnap = await t.get(tableRef);
+    const [tableSnap, restaurantSnap] = await Promise.all([t.get(tableRef), t.get(restaurantRef)]);
     if (!tableSnap.exists) {
       throw new HttpsError("not-found", `Table ${order.tableId} not found`);
     }
 
     t.update(orderRef, { status: "closed", closedAt: FieldValue.serverTimestamp() });
     t.update(tableRef, { status: "needs_cleaning" });
-    return { orderId, tableStatus: "needs_cleaning" };
+
+    const restaurant = restaurantSnap.data();
+    const subtotal = order.totalAmount;
+    const serviceCharge = (subtotal * (restaurant.serviceChargePct || 0)) / 100;
+    const gst = (subtotal * (restaurant.gstPct || 0)) / 100;
+
+    return {
+      orderId,
+      tableStatus: "needs_cleaning",
+      bill: { subtotal, serviceCharge, gst, total: subtotal + serviceCharge + gst },
+    };
   });
 });
 

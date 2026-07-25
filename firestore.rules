@@ -82,9 +82,15 @@ service cloud.firestore {
 
       match /staff/{staffId} {
         // Any staff member can see the roster (e.g. who's clocked in); only
-        // a manager manages accounts/roles.
+        // a manager manages accounts/roles. One exception: a staff member
+        // can clock themself in/out (flip their own clockedIn) without a
+        // manager doing it for them — everything else about their own doc
+        // (name, email, role) still has to stay put.
         allow read: if isStaff(restaurantId);
-        allow write: if isManager(restaurantId);
+        allow update: if isManager(restaurantId)
+          || (isStaff(restaurantId) && request.auth.uid == staffId
+              && unchanged('name') && unchanged('email') && unchanged('role'));
+        allow create, delete: if isManager(restaurantId);
       }
 
       match /members/{memberId} {

@@ -34,7 +34,7 @@ async function setup() {
     await restaurantRef.collection("ingredients").doc("paneer").set({ name: "Paneer", currentStock: 8, lowStockThreshold: 2 });
     await restaurantRef.collection("tables").doc("table_1").set({ number: 1, capacity: 2, status: "empty" });
     await restaurantRef.collection("orders").doc("order_1").set({ tableId: "table_1", status: "open", items: [], totalAmount: 0 });
-    await restaurantRef.collection("staff").doc("waiter-uid").set({ name: "W", role: "waiter" });
+    await restaurantRef.collection("staff").doc("waiter-uid").set({ name: "W", email: "w@test.com", role: "waiter", clockedIn: false });
     await restaurantRef.collection("staff").doc("manager-uid").set({ name: "M", role: "manager" });
     await restaurantRef.collection("members").doc("member-uid").set({ name: "Mem" });
   });
@@ -51,6 +51,9 @@ function order(db) {
 }
 function member(db, uid) {
   return db.collection("restaurants").doc(RESTAURANT_ID).collection("members").doc(uid);
+}
+function staff(db, uid) {
+  return db.collection("restaurants").doc(RESTAURANT_ID).collection("staff").doc(uid);
 }
 
 test("guest can read the public menu", async () => {
@@ -113,6 +116,24 @@ test("a member can write their own profile", async () => {
 
 test("a member cannot write someone else's profile", async () => {
   await assertFails(member(testEnv.authenticatedContext("member-uid").firestore(), "someone-else-uid").set({ name: "Hijacked" }));
+});
+
+test("a waiter can clock themself in", async () => {
+  await assertSucceeds(
+    staff(testEnv.authenticatedContext("waiter-uid").firestore(), "waiter-uid").update({ clockedIn: true })
+  );
+});
+
+test("a waiter cannot change their own role", async () => {
+  await assertFails(
+    staff(testEnv.authenticatedContext("waiter-uid").firestore(), "waiter-uid").update({ role: "manager" })
+  );
+});
+
+test("a waiter cannot clock someone else in", async () => {
+  await assertFails(
+    staff(testEnv.authenticatedContext("waiter-uid").firestore(), "manager-uid").update({ clockedIn: true })
+  );
 });
 
 async function run() {

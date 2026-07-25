@@ -5,6 +5,16 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Billing breakdown + staff clock-in
+
+`closeOrder` now returns the actual bill (subtotal + service charge +
+GST + total), not just the raw total — just used numbers that already
+existed, no new function needed. Staff can also clock themselves in/out
+now — was a rules-only fix, a waiter couldn't touch their own staff doc
+at all before this. 44 test cases passing.
+
+---
+
 ## 2026-07-25 — Restocking
 
 Added `restockIngredient` for managers — before this, stock only ever

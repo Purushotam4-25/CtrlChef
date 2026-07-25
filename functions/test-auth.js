@@ -153,9 +153,15 @@ test("seatTable with no auth is rejected", async () => {
   assertStatus(res, "UNAUTHENTICATED", "seatTable no-auth");
 });
 
-test("closeOrder as waiter succeeds once every item is served", async () => {
+test("closeOrder as waiter succeeds once every item is served, with the right bill", async () => {
   const res = await call("closeOrder", { restaurantId: RESTAURANT_ID, orderId }, waiter.idToken);
   assertOk(res, "closeOrder as waiter");
+
+  // chicken_tikka x1 @ 260, demo-restaurant-1 is seeded at 5% service charge + 5% GST.
+  const { bill } = res.result;
+  if (bill.subtotal !== 260 || bill.serviceCharge !== 13 || bill.gst !== 13 || bill.total !== 286) {
+    throw new Error(`closeOrder bill: expected {subtotal:260,serviceCharge:13,gst:13,total:286}, got ${JSON.stringify(bill)}`);
+  }
 });
 
 test("cancelOrderItem with no auth is rejected", async () => {

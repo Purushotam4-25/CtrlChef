@@ -35,12 +35,16 @@ Order items snapshot the dish's name, price, and recipe at the moment
 they're ordered, so editing or deleting a menu item later doesn't mess up
 old numbers.
 
-Tested a lot — 41 cases across 5 test suites (`test:rules`, `test:auth`,
+`closeOrder` now returns the final bill breakdown too (subtotal, service
+charge, GST, total), and staff can clock themselves in/out without a
+manager doing it for them.
+
+Tested a lot — 44 cases across 5 test suites (`test:rules`, `test:auth`,
 `test:forecast`, `test:analytics`, `test:inventory`), plus manual checks
 against real seeded data whenever something changed.
 
-Frontend hasn't started — still the default scaffold. Gemini assistant's
-on hold — need to sort out API keys and scope first.
+Frontend hasn't started — still the default scaffold. Gemini assistant
+not built.
 
 Run emulators with `firebase emulators:start` from the repo root. Run
 `npm install` inside `functions/` first, it's not committed.
@@ -93,3 +97,10 @@ Added `restockIngredient` — before this, stock only ever went down (or
 came back via a cancelled order), there was no way to record a real
 delivery. Manager-only, updates stock/lowStock/availability together like
 everything else does. Verified against real seeded data too.
+
+### 2026-07-25 — Billing breakdown + staff clock-in
+`closeOrder` now returns the actual final bill (subtotal + service charge
++ GST), not just the raw total — no new function needed, the numbers were
+already there. Also let staff clock themselves in/out — a rules tweak, a
+waiter couldn't even touch their own staff doc before this. 44 test cases
+passing now.
