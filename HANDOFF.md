@@ -21,25 +21,29 @@ ngs-h — web app.
 **Last updated**: 2026-07-25
 
 Firebase project (`ctrlchef-b8ba2`) is set up — Firestore, Functions,
-Hosting, the full emulator suite, all in `firebase.json`. Firestore rules
-are still the default wide-open ones (expire 2026-08-24, need real rules
-before then — planned for Day 3). Spec/roadmap doc stays local only, at
-`VibeAthon_SmartRestaurant_Spec_Roadmap.md`, gitignored.
+Hosting, the full emulator suite, all in `firebase.json`. Spec/roadmap doc
+stays local only, at `VibeAthon_SmartRestaurant_Spec_Roadmap.md`, gitignored.
 
 Backend's got its spine now, on the `backend` branch: a seed script for
-demo ingredients/menu (`functions/seed.js`), the order function
+demo ingredients/menu/tables (`functions/seed.js`), the order function
 (`functions/index.js`, `addOrderItem`) that checks stock, decrements it,
 and recomputes what's available — all in one transaction so it can't
-oversell — and now the kitchen ticket side too: `advanceOrderItemStatus`
-moves an item through received → preparing → ready → served one step at
-a time, and `cancelOrderItem` lets a line be pulled (only while still
-`received`) and gives the stock back. Tables exist now too — 8 seeded
-(mixed 2/4/6-tops) — with `seatTable`, `closeOrder`, and `markTableClean`
-walking a table through empty → occupied → needs_cleaning → empty. Shared
-logic for "is this dish available" lives in `functions/lib/availability.js`.
+oversell — the kitchen ticket side (`advanceOrderItemStatus`,
+`cancelOrderItem`), and the table lifecycle (`seatTable`, `closeOrder`,
+`markTableClean`). Shared logic for "is this dish available" lives in
+`functions/lib/availability.js`.
+
+Real security is in now too, on both layers: `firestore.rules` locks down
+direct client access per role (public menu reads, staff-only order/table/
+ingredient reads, manager-only menu/inventory edits, `available` and
+`currentStock` never hand-editable), and every Cloud Function checks the
+caller's staff role via `functions/lib/auth.js` before doing anything —
+previously any of them could be called with no login at all. Tested with
+`npm run test:rules` (needs the Firestore emulator running) and by hand
+against the Auth emulator for the functions.
 
 Frontend side is still just the default scaffold — no app code, no auth
-yet.
+wired up in a client yet.
 
 Run emulators with `firebase emulators:start` from the repo root. Run
 `npm install` inside `functions/` first, it's not committed.
@@ -93,3 +97,23 @@ put an order on it, closed the order (table flips to needs_cleaning,
 order to closed), tried closing it twice (blocked), then cleaned it and
 confirmed it's back to empty with `seatedAt` cleared. Next up: real
 security rules — everything so far has been running wide open.
+
+### 2026-07-25 — Real security rules, both layers
+Two things were both wide open before this: `firestore.rules` (default
+30-day rule) and the Cloud Functions themselves (no auth check at all —
+anyone could've called `addOrderItem` with no login). Fixed both.
+`firestore.rules` now does public menu reads, staff-only reads on orders/
+tables/ingredients, manager-only menu/inventory edits, and blocks
+`available`/`currentStock` from ever being hand-edited, even by a
+manager. Every Cloud Function now calls `requireStaffRole()`
+(`functions/lib/auth.js`) first, matching the spec's actual role split —
+notably chef handles received→preparing→ready, waiter handles
+ready→served, not just "any staff." Tested for real: added
+`@firebase/rules-unit-testing` and a 13-case script (`npm run test:rules`)
+covering guest/staff/manager reads and writes across every collection —
+all pass. Also spun up the Auth emulator, created real waiter/chef/manager
+test accounts, and called the functions with real ID tokens: confirmed
+no-auth calls get rejected, wrong-role calls get rejected, and the
+chef/waiter split on kitchen tickets works exactly as the spec describes.
+Next up: manager analytics, low-stock forecasting, Gemini assistant —
+Day 3 territory.

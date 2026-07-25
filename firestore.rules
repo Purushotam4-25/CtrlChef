@@ -3,17 +3,98 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 8, 24);
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Staff doc IDs are expected to equal the caller's Firebase Auth uid —
+    // same assumption the Cloud Functions make (see functions/lib/auth.js).
+    function staffDoc(restaurantId) {
+      return get(/databases/$(database)/documents/restaurants/$(restaurantId)/staff/$(request.auth.uid));
+    }
+
+    function hasRole(restaurantId, roles) {
+      return isSignedIn() && staffDoc(restaurantId).data.role in roles;
+    }
+
+    function isStaff(restaurantId) {
+      return hasRole(restaurantId, ['waiter', 'chef', 'manager']);
+    }
+
+    function isManager(restaurantId) {
+      return hasRole(restaurantId, ['manager']);
+    }
+
+    match /restaurants/{restaurantId} {
+      // Public info (name, service charge %, GST %) — the menu page needs it
+      // and there's nothing sensitive in it.
+      allow read: if true;
+      allow write: if isManager(restaurantId);
+
+      match /dishes/{dishId} {
+        // Public menu — guests and members need to see it with no login.
+        allow read: if true;
+        allow create: if isManager(restaurantId);
+        // `available` is computed by addOrderItem/cancelOrderItem transactions
+        // only — a manager can edit the rest of a dish (name, price, ...) but
+        // can't hand-flip availability.
+        allow update: if isManager(restaurantId)
+          && request.resource.data.available == resource.data.available;
+        allow delete: if isManager(restaurantId);
+      }
+
+      match /ingredients/{ingredientId} {
+        // Raw stock counts are a staff concern, not public.
+        allow read: if isStaff(restaurantId);
+        allow create: if isManager(restaurantId);
+        // currentStock only ever changes via addOrderItem/cancelOrderItem —
+        // a manager can rename/re-unit/adjust the low-stock threshold, but
+        // can't hand-edit the stock count itself.
+        allow update: if isManager(restaurantId)
+          && request.resource.data.currentStock == resource.data.currentStock;
+        allow delete: if isManager(restaurantId);
+      }
+
+      match /tables/{tableId} {
+        // Table map is a staff tool, not customer-facing.
+        allow read: if isStaff(restaurantId);
+        allow create: if isManager(restaurantId);
+        // `status`/`seatedAt` only change via seatTable/closeOrder/
+        // markTableClean — a manager can fix a table's number/capacity but
+        // can't hand-edit its lifecycle state.
+        allow update: if isManager(restaurantId)
+          && request.resource.data.status == resource.data.status;
+        allow delete: if isManager(restaurantId);
+      }
+
+      match /orders/{orderId} {
+        // Orders carry money + stock-linked state (items, totalAmount) that
+        // must stay consistent with the ingredient transactions — no direct
+        // client writes at all, even for a manager. Every mutation goes
+        // through addOrderItem / advanceOrderItemStatus / cancelOrderItem /
+        // closeOrder.
+        allow read: if isStaff(restaurantId);
+        allow write: if false;
+      }
+
+      match /staff/{staffId} {
+        // Any staff member can see the roster (e.g. who's clocked in); only
+        // a manager manages accounts/roles.
+        allow read: if isStaff(restaurantId);
+        allow write: if isManager(restaurantId);
+      }
+
+      match /members/{memberId} {
+        allow read: if isStaff(restaurantId) || (isSignedIn() && request.auth.uid == memberId);
+        allow create, update: if isSignedIn() && request.auth.uid == memberId;
+        allow delete: if isManager(restaurantId);
+      }
+
+      match /queue/{entryId} {
+        // Guests check in with no login (per spec: "Guest ... queue check-in").
+        allow read, create: if true;
+        allow update, delete: if isStaff(restaurantId);
+      }
     }
   }
 }

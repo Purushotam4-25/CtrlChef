@@ -4,10 +4,21 @@ const { onCall, HttpsError } = require("firebase-functions/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { computeAvailable } = require("./lib/availability");
+const { requireStaffRole } = require("./lib/auth");
 
 // received -> preparing -> ready -> served. Order items only ever move
 // forward one step at a time through this list.
 const ITEM_STATUSES = ["received", "preparing", "ready", "served"];
+
+// Who's allowed to move an item TO each status. Chef cooks it
+// (received -> preparing -> ready), waiter delivers it (ready -> served) —
+// matches the spec's kitchen workflow description exactly. "received" isn't
+// listed because nothing ever advances INTO it — addOrderItem creates it.
+const ADVANCE_ROLES = {
+  preparing: ["chef", "manager"],
+  ready: ["chef", "manager"],
+  served: ["waiter", "manager"],
+};
 
 setGlobalOptions({ maxInstances: 10 });
 
@@ -33,6 +44,8 @@ exports.addOrderItem = onCall(async (request) => {
       "restaurantId, tableId, dishId and a positive integer qty are required"
     );
   }
+
+  await requireStaffRole(request, restaurantId, ["waiter", "manager"]);
 
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
   const dishRef = restaurantRef.collection("dishes").doc(dishId);
@@ -130,12 +143,14 @@ exports.addOrderItem = onCall(async (request) => {
 exports.advanceOrderItemStatus = onCall(async (request) => {
   const { restaurantId, orderId, itemId, newStatus } = request.data;
 
-  if (!restaurantId || !orderId || !itemId || !ITEM_STATUSES.includes(newStatus)) {
+  if (!restaurantId || !orderId || !itemId || !ADVANCE_ROLES[newStatus]) {
     throw new HttpsError(
       "invalid-argument",
-      `restaurantId, orderId, itemId and a newStatus in [${ITEM_STATUSES.join(", ")}] are required`
+      `restaurantId, orderId, itemId and a newStatus in [${Object.keys(ADVANCE_ROLES).join(", ")}] are required`
     );
   }
+
+  await requireStaffRole(request, restaurantId, ADVANCE_ROLES[newStatus]);
 
   const orderRef = db.collection("restaurants").doc(restaurantId).collection("orders").doc(orderId);
 
@@ -178,6 +193,8 @@ exports.cancelOrderItem = onCall(async (request) => {
   if (!restaurantId || !orderId || !itemId) {
     throw new HttpsError("invalid-argument", "restaurantId, orderId and itemId are required");
   }
+
+  await requireStaffRole(request, restaurantId, ["waiter", "manager"]);
 
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
   const orderRef = restaurantRef.collection("orders").doc(orderId);
@@ -251,6 +268,8 @@ exports.seatTable = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "restaurantId and tableId are required");
   }
 
+  await requireStaffRole(request, restaurantId, ["waiter", "manager"]);
+
   const tableRef = db.collection("restaurants").doc(restaurantId).collection("tables").doc(tableId);
   return db.runTransaction(async (t) => {
     const tableSnap = await t.get(tableRef);
@@ -274,6 +293,8 @@ exports.closeOrder = onCall(async (request) => {
   if (!restaurantId || !orderId) {
     throw new HttpsError("invalid-argument", "restaurantId and orderId are required");
   }
+
+  await requireStaffRole(request, restaurantId, ["waiter", "manager"]);
 
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
   const orderRef = restaurantRef.collection("orders").doc(orderId);
@@ -306,6 +327,8 @@ exports.markTableClean = onCall(async (request) => {
   if (!restaurantId || !tableId) {
     throw new HttpsError("invalid-argument", "restaurantId and tableId are required");
   }
+
+  await requireStaffRole(request, restaurantId, ["waiter", "manager"]);
 
   const tableRef = db.collection("restaurants").doc(restaurantId).collection("tables").doc(tableId);
   return db.runTransaction(async (t) => {

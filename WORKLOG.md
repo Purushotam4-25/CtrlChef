@@ -5,6 +5,23 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Real security rules
+
+Everything's been running wide open until now — fixed both layers.
+`firestore.rules`: public menu, staff-only reads on orders/tables/
+ingredients, manager-only edits, and `available`/`currentStock` can never
+be hand-edited by anyone, manager included. The Cloud Functions had zero
+auth checks before this — anyone could've called them with no login —
+so each one now checks the caller's staff role first, matching the
+spec's actual split (chef cooks it, waiter delivers it, not just "any
+staff"). Tested both properly: a 13-case rules script using Firebase's
+official rules-testing library, plus real waiter/chef/manager accounts
+created in the Auth emulator to call the functions with actual ID tokens
+and confirm no-auth/wrong-role calls get rejected and correct-role calls
+go through.
+
+---
+
 ## 2026-07-25 — Table state machine
 
 Tables exist now: 8 seeded, mixed 2/4/6-tops. `seatTable`, `closeOrder`,
