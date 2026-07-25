@@ -55,6 +55,18 @@ const dishes = [
     ingredients: [{ ingredientId: "basmati_rice", qtyRequired: 0.1 }, { ingredientId: "milk", qtyRequired: 0.3 }, { ingredientId: "sugar", qtyRequired: 0.1 }] },
 ];
 
+// Mixed capacities per the demo data plan: 2/4/6-tops.
+const tables = [
+  { id: "table_1", number: 1, capacity: 2 },
+  { id: "table_2", number: 2, capacity: 2 },
+  { id: "table_3", number: 3, capacity: 2 },
+  { id: "table_4", number: 4, capacity: 4 },
+  { id: "table_5", number: 5, capacity: 4 },
+  { id: "table_6", number: 6, capacity: 4 },
+  { id: "table_7", number: 7, capacity: 6 },
+  { id: "table_8", number: 8, capacity: 6 },
+];
+
 async function seed() {
   const restaurantRef = db.collection("restaurants").doc(RESTAURANT_ID);
   await restaurantRef.set({
@@ -88,7 +100,17 @@ async function seed() {
     });
   }
 
-  console.log(`Seeded ${ingredients.length} ingredients and ${dishes.length} dishes into restaurants/${RESTAURANT_ID}`);
+  for (const table of tables) {
+    await restaurantRef.collection("tables").doc(table.id).set({
+      number: table.number,
+      capacity: table.capacity,
+      status: "empty",
+    });
+  }
+
+  console.log(
+    `Seeded ${ingredients.length} ingredients, ${dishes.length} dishes, and ${tables.length} tables into restaurants/${RESTAURANT_ID}`
+  );
 }
 
 seed()

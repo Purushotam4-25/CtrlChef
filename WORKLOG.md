@@ -5,6 +5,17 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Table state machine
+
+Tables exist now: 8 seeded, mixed 2/4/6-tops. `seatTable`, `closeOrder`,
+and `markTableClean` walk a table through empty → occupied →
+needs_cleaning → empty, each guarded to only work from the right starting
+state. Ran the full loop on the emulator plus the invalid moves (seating
+an occupied table, closing an already-closed order, cleaning a table
+that isn't dirty) — all rejected correctly.
+
+---
+
 ## 2026-07-25 — Kitchen ticket state machine
 
 Order items can now move through their lifecycle: `advanceOrderItemStatus`

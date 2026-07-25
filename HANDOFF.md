@@ -33,8 +33,10 @@ and recomputes what's available — all in one transaction so it can't
 oversell — and now the kitchen ticket side too: `advanceOrderItemStatus`
 moves an item through received → preparing → ready → served one step at
 a time, and `cancelOrderItem` lets a line be pulled (only while still
-`received`) and gives the stock back. Shared logic for "is this dish
-available" lives in `functions/lib/availability.js`.
+`received`) and gives the stock back. Tables exist now too — 8 seeded
+(mixed 2/4/6-tops) — with `seatTable`, `closeOrder`, and `markTableClean`
+walking a table through empty → occupied → needs_cleaning → empty. Shared
+logic for "is this dish available" lives in `functions/lib/availability.js`.
 
 Frontend side is still just the default scaffold — no app code, no auth
 yet.
@@ -81,3 +83,13 @@ flow against the emulator: ordered, tried to skip a stage (blocked),
 advanced properly, tried to cancel a "preparing" item (blocked), then
 ordered + cancelled a fresh item and confirmed stock went right back to
 where it started. Next up: tables, real security rules.
+
+### 2026-07-25 — Table state machine
+Seeded 8 tables (2/4/6-tops) and added `seatTable`, `closeOrder`, and
+`markTableClean` — empty → occupied → needs_cleaning → empty, each one
+guarded so it only fires from the right starting state. Ran the full
+cycle on the emulator: seated a table, tried seating it again (blocked),
+put an order on it, closed the order (table flips to needs_cleaning,
+order to closed), tried closing it twice (blocked), then cleaned it and
+confirmed it's back to empty with `seatedAt` cleared. Next up: real
+security rules — everything so far has been running wide open.
