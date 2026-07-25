@@ -24,23 +24,27 @@ Firebase project (`ctrlchef-b8ba2`) is set up — Firestore, Functions,
 Hosting, the full emulator suite, all in `firebase.json`. Spec/roadmap doc
 stays local only, at `VibeAthon_SmartRestaurant_Spec_Roadmap.md`, gitignored.
 
-Backend's got its spine now, on the `backend` branch: a seed script for
-demo ingredients/menu/tables (`functions/seed.js`), the order function
-(`functions/index.js`, `addOrderItem`) that checks stock, decrements it,
-and recomputes what's available — all in one transaction so it can't
-oversell — the kitchen ticket side (`advanceOrderItemStatus`,
-`cancelOrderItem`), and the table lifecycle (`seatTable`, `closeOrder`,
-`markTableClean`). Shared logic for "is this dish available" lives in
-`functions/lib/availability.js`.
+Backend's got its spine now, on the `backend` branch, split by domain:
+`functions/orders.js` (`addOrderItem`, `cancelOrderItem` — stock
+check/decrement + availability recompute, one transaction so it can't
+oversell), `functions/tickets.js` (`advanceOrderItemStatus` — the kitchen
+state machine), `functions/tables.js` (`seatTable`, `closeOrder`,
+`markTableClean` — the table lifecycle; `closeOrder` now refuses to close
+while any item isn't `served` yet, so a kitchen ticket can't get silently
+orphaned). `functions/index.js` just initializes the app and re-exports
+from those three. `functions/seed.js` writes demo ingredients/menu/tables.
+Shared logic: `functions/lib/availability.js` (is this dish available) and
+`functions/lib/auth.js` (`requireStaffRole`, `WAITER_OR_MANAGER`).
 
-Real security is in now too, on both layers: `firestore.rules` locks down
-direct client access per role (public menu reads, staff-only order/table/
+Real security is in on both layers: `firestore.rules` locks down direct
+client access per role (public menu reads, staff-only order/table/
 ingredient reads, manager-only menu/inventory edits, `available` and
-`currentStock` never hand-editable), and every Cloud Function checks the
-caller's staff role via `functions/lib/auth.js` before doing anything —
-previously any of them could be called with no login at all. Tested with
-`npm run test:rules` (needs the Firestore emulator running) and by hand
-against the Auth emulator for the functions.
+`currentStock` never hand-editable, queue check-ins need a sane party
+size), and every Cloud Function checks the caller's staff role before
+doing anything — `addOrderItem` also now records `createdBy` from the
+verified `request.auth.uid`, not a client-supplied field. Tested with
+`npm run test:rules` and `npm run test:auth` (both need the emulators
+running — see each file's header comment for which ones).
 
 Frontend side is still just the default scaffold — no app code, no auth
 wired up in a client yet.
@@ -117,3 +121,27 @@ no-auth calls get rejected, wrong-role calls get rejected, and the
 chef/waiter split on kitchen tickets works exactly as the spec describes.
 Next up: manager analytics, low-stock forecasting, Gemini assistant —
 Day 3 territory.
+
+### 2026-07-25 — Code review fixes
+Ran `/code-review` on the table-state-machine + security-rules work above
+before pushing; it found 3 real bugs and a few smaller things, fixed here.
+`closeOrder` now refuses to close while any item isn't `served` yet
+(previously it didn't check at all — a kitchen ticket still `preparing`
+would silently vanish from view and its reserved stock would never come
+back). `addOrderItem` now records `createdBy` from the verified
+`request.auth.uid` instead of a client-supplied field that anyone could've
+spoofed. `advanceOrderItemStatus`'s status validation used a plain object
+lookup (`ADVANCE_ROLES[newStatus]`) that a crafted `newStatus: "__proto__"`
+could sail through, crashing the function — switched to
+`Object.hasOwn()`. Also deduped the repeated waiter/manager role array
+into `functions/lib/auth.js`, split `functions/index.js` (~350 lines, 6
+unrelated functions) into `orders.js`/`tickets.js`/`tables.js` with
+`index.js` just re-exporting, added minimal field validation to the
+`queue` create rule (sane party size, can't check in as already-seated),
+factored the repeated "field can't change" rules pattern into one
+`unchanged()` helper, and added `functions/test-auth.js` — an automated
+version of the manual curl+Auth-emulator testing from earlier, so the
+Cloud Function auth guards have a repeatable check the way the rules
+already did. All of it verified against the emulators again afterward:
+`test:rules` (14 cases), `test:auth` (12 cases), plus manual spot-checks
+on each of the 3 bug fixes specifically.

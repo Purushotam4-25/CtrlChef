@@ -100,6 +100,13 @@ test("anyone can create a queue check-in with no login", async () => {
   );
 });
 
+test("a queue check-in needs a sane party size", async () => {
+  const db = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({ partySize: -1, status: "waiting" })
+  );
+});
+
 test("a member can write their own profile", async () => {
   await assertSucceeds(member(testEnv.authenticatedContext("member-uid").firestore(), "member-uid").set({ name: "Updated" }));
 });

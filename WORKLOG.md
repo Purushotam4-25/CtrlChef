@@ -5,6 +5,26 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Code review fixes
+
+`/code-review` on the previous two entries' work turned up 3 real bugs
+before push: `closeOrder` could close an order with unserved items still
+on it (kitchen ticket vanishes from view, its stock never comes back);
+`addOrderItem` recorded `createdBy` from a client-supplied field instead
+of the verified auth uid (spoofable); `advanceOrderItemStatus`'s status
+validation could be bypassed with `newStatus: "__proto__"`, crashing the
+function instead of rejecting cleanly. All three fixed. Also: split
+`functions/index.js` into `orders.js`/`tickets.js`/`tables.js` (it'd grown
+to ~350 lines of 6 unrelated functions), deduped a repeated role-array
+literal, added party-size validation to the public `queue` create rule,
+factored a repeated rules pattern into one helper, and added
+`functions/test-auth.js` so the Cloud Function auth guards have an
+automated test the way the Firestore rules already did. Re-verified
+everything against the emulators: 14/14 rules cases, 12/12 auth cases,
+plus manual spot-checks on each bug fix.
+
+---
+
 ## 2026-07-25 — Real security rules
 
 Everything's been running wide open until now — fixed both layers.

@@ -25,6 +25,12 @@ service cloud.firestore {
       return hasRole(restaurantId, ['manager']);
     }
 
+    // "This field can't change on update" — shared by dishes.available,
+    // ingredients.currentStock, and tables.status below.
+    function unchanged(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
     match /restaurants/{restaurantId} {
       // Public info (name, service charge %, GST %) — the menu page needs it
       // and there's nothing sensitive in it.
@@ -38,8 +44,7 @@ service cloud.firestore {
         // `available` is computed by addOrderItem/cancelOrderItem transactions
         // only — a manager can edit the rest of a dish (name, price, ...) but
         // can't hand-flip availability.
-        allow update: if isManager(restaurantId)
-          && request.resource.data.available == resource.data.available;
+        allow update: if isManager(restaurantId) && unchanged('available');
         allow delete: if isManager(restaurantId);
       }
 
@@ -50,8 +55,7 @@ service cloud.firestore {
         // currentStock only ever changes via addOrderItem/cancelOrderItem —
         // a manager can rename/re-unit/adjust the low-stock threshold, but
         // can't hand-edit the stock count itself.
-        allow update: if isManager(restaurantId)
-          && request.resource.data.currentStock == resource.data.currentStock;
+        allow update: if isManager(restaurantId) && unchanged('currentStock');
         allow delete: if isManager(restaurantId);
       }
 
@@ -62,8 +66,7 @@ service cloud.firestore {
         // `status`/`seatedAt` only change via seatTable/closeOrder/
         // markTableClean — a manager can fix a table's number/capacity but
         // can't hand-edit its lifecycle state.
-        allow update: if isManager(restaurantId)
-          && request.resource.data.status == resource.data.status;
+        allow update: if isManager(restaurantId) && unchanged('status');
         allow delete: if isManager(restaurantId);
       }
 
@@ -91,8 +94,14 @@ service cloud.firestore {
       }
 
       match /queue/{entryId} {
-        // Guests check in with no login (per spec: "Guest ... queue check-in").
-        allow read, create: if true;
+        // Guests check in with no login (per spec: "Guest ... queue check-in") —
+        // but still require a sane party size and that they're not checking
+        // themselves in as already-seated.
+        allow read: if true;
+        allow create: if request.resource.data.partySize is number
+          && request.resource.data.partySize > 0
+          && request.resource.data.partySize <= 20
+          && request.resource.data.status == 'waiting';
         allow update, delete: if isStaff(restaurantId);
       }
     }
