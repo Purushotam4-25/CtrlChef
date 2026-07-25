@@ -36,12 +36,17 @@ exports.getStockForecast = onCall(async (request) => {
   // moment (see orders.js) regardless of what happens to it afterward, so
   // summing items here — not filtering by item/order status — is what
   // actually matches how currentStock got to where it is.
+  //
+  // Prefer the item's own ingredientsUsed snapshot over the dish's current
+  // ingredients — the dish may have been edited or deleted since, but the
+  // snapshot is what actually consumed the stock. Older items from before
+  // this snapshot existed fall back to the current dish lookup.
   const consumedByIngredient = {};
   ordersSnap.forEach((doc) => {
     for (const item of doc.data().items) {
-      const dish = dishesById[item.dishId];
-      if (!dish) continue;
-      for (const req of dish.ingredients) {
+      const ingredients = item.ingredientsUsed || dishesById[item.dishId]?.ingredients;
+      if (!ingredients) continue;
+      for (const req of ingredients) {
         consumedByIngredient[req.ingredientId] =
           (consumedByIngredient[req.ingredientId] || 0) + req.qtyRequired * item.qty;
       }

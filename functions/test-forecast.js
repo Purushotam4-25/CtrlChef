@@ -58,8 +58,9 @@ async function setup() {
   const restaurantRef = db.collection("restaurants").doc(RESTAURANT_ID);
   await restaurantRef.set({ name: "Forecast Test Kitchen" });
 
-  // flour_test: currentStock 10, consumed 5 units (2 + 3) over the 7-day
-  // window -> avgDailyConsumption = 5/7, predictedStockoutInDays = 10/(5/7) = 14.
+  // flour_test: currentStock 10, consumed 9 units (2 + 3 direct, + 4 via
+  // order_deleted_dish's ingredientsUsed snapshot below) over the 7-day
+  // window -> avgDailyConsumption = 9/7, predictedStockoutInDays = 10/(9/7).
   await restaurantRef.collection("ingredients").doc("flour_test").set({
     name: "Flour (test)",
     unit: "kg",
@@ -110,6 +111,26 @@ async function setup() {
     items: [{ itemId: "c1", dishId: "test_dish", dishName: "Test Dish", qty: 10, price: 100, itemStatus: "served" }],
   });
 
+  // References a dishId that doesn't exist in the dishes collection at all
+  // (simulates a deleted dish) but carries its own ingredientsUsed snapshot.
+  // Proves consumption is still counted via the snapshot, not lost to the
+  // `if (!dish) continue` fallback path.
+  await restaurantRef.collection("orders").doc("order_deleted_dish").set({
+    tableId: "n/a",
+    status: "closed",
+    createdAt: admin.firestore.Timestamp.fromMillis(now - 1 * DAY_MS),
+    totalAmount: 100,
+    items: [{
+      itemId: "d1",
+      dishId: "gone_dish",
+      dishName: "Deleted Dish",
+      qty: 4,
+      price: 100,
+      itemStatus: "served",
+      ingredientsUsed: [{ ingredientId: "flour_test", qtyRequired: 1 }],
+    }],
+  });
+
   manager = await signUp(`manager-forecast-${now}@test.com`);
   await restaurantRef.collection("staff").doc(manager.uid).set({ name: "Test Manager", role: "manager" });
 }
@@ -128,8 +149,19 @@ test("flour_test's avgDailyConsumption and predictedStockoutInDays match hand-ca
   const entry = res.result.forecast.find((f) => f.ingredientId === "flour_test");
   if (!entry) throw new Error("flour_test missing from forecast");
 
-  assertClose(entry.avgDailyConsumption, 5 / DAYS, "flour_test avgDailyConsumption");
-  assertClose(entry.predictedStockoutInDays, 10 / (5 / DAYS), "flour_test predictedStockoutInDays");
+  // 9 units = 2 (order_a) + 3 (order_b) + 4 (order_deleted_dish, via ingredientsUsed).
+  assertClose(entry.avgDailyConsumption, 9 / DAYS, "flour_test avgDailyConsumption");
+  assertClose(entry.predictedStockoutInDays, 10 / (9 / DAYS), "flour_test predictedStockoutInDays");
+});
+
+test("consumption from a deleted dish (via ingredientsUsed snapshot) still counts", async () => {
+  const res = await call({ restaurantId: RESTAURANT_ID, days: DAYS }, manager.idToken);
+  const entry = res.result.forecast.find((f) => f.ingredientId === "flour_test");
+
+  // Without the ingredientsUsed fallback, order_deleted_dish's 4 units would
+  // silently drop (dishesById["gone_dish"] is undefined) and this would be
+  // 5/DAYS instead of 9/DAYS — this case is what actually pins the fix.
+  assertClose(entry.avgDailyConsumption, 9 / DAYS, "flour_test avgDailyConsumption includes deleted-dish order");
 });
 
 test("sugar_test (no consumption in window) gets a null stockout prediction", async () => {

@@ -57,10 +57,20 @@ manager-only. Ingredients now carry a `lowStock` boolean kept in sync with
 data's already there and staff-readable. `closeOrder` now stamps
 `closedAt`, needed for the turnover math.
 
+Order items now also snapshot `ingredientsUsed` (the dish's recipe at order
+time), same idea as the existing `dishName`/`price` snapshots — a
+code-review pass found that deleting or editing a dish afterward was
+silently corrupting historical forecast/sales numbers, since both were
+looking the dish up live instead of using what was actually true at order
+time. `getSalesAnalytics` also now falls back to an item's snapshotted
+`dishName` when its dish is gone, so `byDish` always reconciles with
+`byStaff`. Both analytics functions reject a negative `days` cleanly now
+instead of silently returning empty results.
+
 Tested with `npm run test:rules`, `test:auth`, `test:forecast`, and
-`test:analytics` (33 cases total, all passing — need the emulators running,
-see each file's header comment for which ones), plus a manual end-to-end
-spot check against the real seeded restaurant data.
+`test:analytics` (37 cases total, all passing — need the emulators running,
+see each file's header comment for which ones), plus manual end-to-end
+spot checks against the real seeded restaurant data.
 
 Frontend side is still just the default scaffold — no app code, no auth
 wired up in a client yet. Gemini assistant (Platinum) deliberately not
@@ -187,3 +197,27 @@ checked against the real output), 33 cases total across all four suites,
 all passing, plus a manual end-to-end run against the real seeded
 restaurant to sanity-check the numbers look right outside the test
 fixtures too.
+
+### 2026-07-25 — Code review fixes: deleted-dish handling + validation
+`/code-review` on the forecast/analytics work found a real shared bug:
+deleting a dish (already allowed by the rules) silently dropped its
+history from both sales totals and stock-forecast consumption, since both
+looked the dish up live in the current `dishes` collection instead of
+using what was true at order time. Fixed at the root: order items now
+snapshot `ingredientsUsed` (the recipe at order time) the same way they
+already snapshot `dishName`/`price` — this also fixes a subtler version of
+the same bug where *editing* a dish's ingredients (not just deleting it)
+would've silently corrupted historical forecasts. `getSalesAnalytics`
+falls back to an item's snapshotted `dishName` when its dish is gone.
+Also fixed: negative `days` on the two analytics functions now gets a
+clean rejection instead of a silently-empty result (`getStockForecast`
+already had this validation, the other two didn't). Added `ponytail:`
+comments naming the two known scan-cost ceilings from the review's
+future-proofing notes, without building the index/rollup out now. New
+test cases specifically prove each fix, not just re-check the happy
+path — caught a real bug in my own new test fixture doing this (a
+fixture's `createdBy` was leaking into an unrelated `byStaff` assertion
+in the existing test). 37 cases across all four suites passing, plus
+manual spot checks against the real seeded restaurant confirming the
+deleted-dish fallback and negative-days rejection both work outside the
+isolated test fixtures too.

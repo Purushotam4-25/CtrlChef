@@ -5,6 +5,30 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Code review fixes: deleted-dish handling + validation
+
+`/code-review` on the forecast/analytics work above found a real bug shared
+by both: if a manager deletes a dish (already allowed by the rules), its
+historical orders silently vanish from sales totals and stock-forecast
+consumption. Fixed properly, not just patched — order items now snapshot
+`ingredientsUsed` (the dish's recipe at order time) alongside the
+`dishName`/`price` they already snapshotted, so forecasting stays accurate
+even if a dish is later edited or deleted, not just worked around for the
+delete case. `getSalesAnalytics` falls back to an item's own snapshotted
+`dishName` when its dish is gone, so `byDish` totals always reconcile with
+`byStaff`'s. Also fixed a validation gap (`getSalesAnalytics`/
+`getTableTurnoverStats` silently accepted negative `days`, producing a
+future cutoff and empty results instead of a clean error) and added
+`ponytail:`-tagged comments naming the two known scan-cost ceilings and
+their upgrade paths, without building the index/rollup out now. New test
+cases specifically pin each fix (not just re-test the happy path) — caught
+one real bug in my own new fixture along the way (a test order's
+`createdBy` was polluting an unrelated `byStaff` assertion). 37 cases
+across all four suites passing, plus manual spot checks against the real
+seeded restaurant.
+
+---
+
 ## 2026-07-25 — Low-stock forecast + manager analytics
 
 Two more roadmap items done: `getStockForecast` (rolling average

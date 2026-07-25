@@ -94,6 +94,7 @@ exports.addOrderItem = onCall(async (request) => {
       dishName: dish.name,
       qty,
       price: dish.price,
+      ingredientsUsed: dish.ingredients, // snapshot — the dish's recipe can be edited/deleted later, forecasting still needs what it actually took
       itemStatus: "received",
       addedAt: Timestamp.now(), // not FieldValue.serverTimestamp() — that sentinel isn't allowed inside array elements
     };

@@ -98,6 +98,22 @@ async function setup() {
     items: [{ itemId: "i2", dishId: "dish_a", dishName: "Dish A", qty: 2, price: 100, itemStatus: "served", addedAt: order2CreatedAt }],
   });
 
+  // dish_deleted doesn't exist in the dishes collection (simulates a
+  // manager having deleted it after this order was placed) — the item
+  // still carries its own snapshotted dishName. On a separate table/capacity
+  // and a separate staff member so it doesn't perturb the capacity-4 turnover
+  // or byStaff numbers hand-calculated below.
+  await restaurantRef.collection("tables").doc("t2").set({ number: 2, capacity: 6, status: "empty" });
+  await restaurantRef.collection("orders").doc("order3").set({
+    tableId: "t2",
+    createdBy: null,
+    status: "closed",
+    createdAt: order2CreatedAt,
+    closedAt: order2ClosedAt,
+    totalAmount: 400,
+    items: [{ itemId: "i3", dishId: "dish_deleted", dishName: "Deleted Dish", qty: 4, price: 100, itemStatus: "served", addedAt: order2CreatedAt }],
+  });
+
   // Hand-calculated: dish_a sold 3+2=5 for 300+200=500 revenue.
   // Turnover for capacity-4 tables: (30 + 50) / 2 = 40 min average, 2 samples.
 }
@@ -142,6 +158,25 @@ test("getTableTurnoverStats matches hand-calculated average", async () => {
   if (!cap4) throw new Error(`expected a capacity-4 bucket, got ${JSON.stringify(res.result.byCapacity)}`);
   assertEqual(cap4.sampleCount, 2, "capacity-4 sampleCount");
   assertEqual(cap4.avgDurationMinutes, 40, "capacity-4 avgDurationMinutes");
+});
+
+test("getSalesAnalytics still totals a since-deleted dish, using its snapshotted name", async () => {
+  const res = await call("getSalesAnalytics", { restaurantId: RESTAURANT_ID }, manager.idToken);
+  const deleted = res.result.byDish.find((d) => d.dishId === "dish_deleted");
+  if (!deleted) throw new Error("expected dish_deleted to still appear in byDish");
+  assertEqual(deleted.name, "Deleted Dish", "dish_deleted name (from item snapshot)");
+  assertEqual(deleted.qty, 4, "dish_deleted qty");
+  assertEqual(deleted.revenue, 400, "dish_deleted revenue");
+});
+
+test("getSalesAnalytics rejects a negative days", async () => {
+  const res = await call("getSalesAnalytics", { restaurantId: RESTAURANT_ID, days: -5 }, manager.idToken);
+  assertStatus(res, "INVALID_ARGUMENT", "getSalesAnalytics negative days");
+});
+
+test("getTableTurnoverStats rejects a negative days", async () => {
+  const res = await call("getTableTurnoverStats", { restaurantId: RESTAURANT_ID, days: -5 }, manager.idToken);
+  assertStatus(res, "INVALID_ARGUMENT", "getTableTurnoverStats negative days");
 });
 
 async function run() {

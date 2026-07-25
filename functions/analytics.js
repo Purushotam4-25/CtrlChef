@@ -14,13 +14,16 @@ function cutoffTimestamp(days) {
 // regardless of item/order status.
 exports.getSalesAnalytics = onCall(async (request) => {
   const { restaurantId } = request.data;
-  const days = Number(request.data.days) || 7;
-  if (!restaurantId) {
-    throw new HttpsError("invalid-argument", "restaurantId is required");
+  const days = request.data.days === undefined ? 7 : Number(request.data.days);
+  if (!restaurantId || !Number.isFinite(days) || days <= 0) {
+    throw new HttpsError("invalid-argument", "restaurantId and a positive days are required");
   }
 
   await requireStaffRole(request, restaurantId, ["manager"]);
 
+  // ponytail: fetches the full dishes/staff collections every call — fine at
+  // demo scale (a dozen dishes, a handful of staff). Paginate or precompute
+  // a rollup if either collection grows large.
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
   const [ordersSnap, dishesSnap, staffSnap] = await Promise.all([
     restaurantRef.collection("orders").where("createdAt", ">=", cutoffTimestamp(days)).get(),
@@ -59,10 +62,13 @@ exports.getSalesAnalytics = onCall(async (request) => {
     for (const item of order.items) {
       const lineRevenue = item.price * item.qty;
 
-      if (byDish[item.dishId]) {
-        byDish[item.dishId].qty += item.qty;
-        byDish[item.dishId].revenue += lineRevenue;
+      // Dish may have since been deleted (managers can) — fall back to the
+      // item's own snapshotted name rather than dropping its sales.
+      if (!byDish[item.dishId]) {
+        byDish[item.dishId] = { dishId: item.dishId, name: item.dishName, qty: 0, revenue: 0 };
       }
+      byDish[item.dishId].qty += item.qty;
+      byDish[item.dishId].revenue += lineRevenue;
 
       const addedAt = item.addedAt.toDate();
       byHour[addedAt.getHours()].qty += item.qty;
@@ -93,9 +99,9 @@ exports.getSalesAnalytics = onCall(async (request) => {
 // tracking is a separate, bigger schema change.
 exports.getTableTurnoverStats = onCall(async (request) => {
   const { restaurantId } = request.data;
-  const days = Number(request.data.days) || 7;
-  if (!restaurantId) {
-    throw new HttpsError("invalid-argument", "restaurantId is required");
+  const days = request.data.days === undefined ? 7 : Number(request.data.days);
+  if (!restaurantId || !Number.isFinite(days) || days <= 0) {
+    throw new HttpsError("invalid-argument", "restaurantId and a positive days are required");
   }
 
   await requireStaffRole(request, restaurantId, ["manager"]);
@@ -105,6 +111,9 @@ exports.getTableTurnoverStats = onCall(async (request) => {
 
   // Single equality filter only (status == "closed"), cutoff applied in
   // memory below — avoids needing a composite index for status+createdAt.
+  // ponytail: scans every closed order ever, not just the window — fine at
+  // demo scale, add a composite index on (status, createdAt) or a periodic
+  // rollup if order volume grows.
   const [ordersSnap, tablesSnap] = await Promise.all([
     restaurantRef.collection("orders").where("status", "==", "closed").get(),
     restaurantRef.collection("tables").get(),
