@@ -1,1 +1,2 @@
 int hi = 0
+str cold = "yolo"
