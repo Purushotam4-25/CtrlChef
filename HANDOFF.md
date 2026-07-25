@@ -19,9 +19,17 @@ ngs-h — web app.
 
 ## Current State
 
-**Last updated**: 2026-07-25 by project-init
+**Last updated**: 2026-07-25 by claude
 
-Project scaffolded, no code written yet.
+Firebase project wired up (`ctrlchef-b8ba2`): Firestore, Functions, Hosting,
+emulator suite (auth/functions/firestore/hosting/UI) all configured in
+`firebase.json`. Default scaffold only — stock `functions/index.js` and
+`public/index.html`, default 30-day-open Firestore rules (expires
+2026-08-24, replace before then). Spec/roadmap is local-only at
+`VibeAthon_SmartRestaurant_Spec_Roadmap.md` — gitignored, do not commit.
+No app code written yet.
+
+Run emulators: `firebase emulators:start` (from repo root).
 
 ## Active Decisions
 
@@ -39,3 +47,11 @@ _(none yet)_
 ### 2026-07-25 — project-init — Scaffolding
 Created initial structure: AGENTS.md, CLAUDE.md, GEMINI.md, HANDOFF.md,
 WORKLOG.md, .gitignore, src/, plans/.
+
+### 2026-07-25 — claude — Firebase emulator setup
+Ran `firebase init` (Firestore, Functions, Hosting) for project
+`ctrlchef-b8ba2`; configured emulator suite in `firebase.json`. Reviewed
+git staging before push — everything was already staged correctly
+(no node_modules, no secrets). Spec doc is kept local-only (gitignored,
+not pushed). Next: replace default Firestore rules and stock
+functions/hosting scaffold with real app code.
