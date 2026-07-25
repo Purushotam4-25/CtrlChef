@@ -5,6 +5,20 @@ what changed, open questions.
 
 ---
 
+## 2026-07-25 — Kitchen ticket state machine
+
+Order items can now move through their lifecycle: `advanceOrderItemStatus`
+steps one item from received → preparing → ready → served, one stage at a
+time — no skipping ahead, no going back once the chef's started.
+`cancelOrderItem` pulls a line but only while it's still `received`, and
+gives back whatever stock was reserved for it. Gave each item a random
+`itemId` so these can find one specific line inside an order's items
+array. Ran through the whole thing on the emulator: normal order, a
+blocked skip-ahead, a blocked cancel-after-preparing, and a real
+cancel that put the stock back exactly where it started.
+
+---
+
 ## 2026-07-25 — Seed script + order/stock logic
 
 Backend spine's in. Seed script writes the demo menu + ingredients (paneer,

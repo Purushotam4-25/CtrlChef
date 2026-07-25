@@ -27,11 +27,14 @@ before then — planned for Day 3). Spec/roadmap doc stays local only, at
 `VibeAthon_SmartRestaurant_Spec_Roadmap.md`, gitignored.
 
 Backend's got its spine now, on the `backend` branch: a seed script for
-demo ingredients/menu (`functions/seed.js`), and the order function
+demo ingredients/menu (`functions/seed.js`), the order function
 (`functions/index.js`, `addOrderItem`) that checks stock, decrements it,
 and recomputes what's available — all in one transaction so it can't
-oversell. Shared logic for "is this dish available" lives in
-`functions/lib/availability.js`.
+oversell — and now the kitchen ticket side too: `advanceOrderItemStatus`
+moves an item through received → preparing → ready → served one step at
+a time, and `cancelOrderItem` lets a line be pulled (only while still
+`received`) and gives the stock back. Shared logic for "is this dish
+available" lives in `functions/lib/availability.js`.
 
 Frontend side is still just the default scaffold — no app code, no auth
 yet.
@@ -67,3 +70,14 @@ orders can't double-spend the same stock. Tested against the emulator
 directly. One rough edge: decimal stock math can flip a dish unavailable
 a touch early from rounding, not a big deal for now. Next up: tables,
 kitchen tickets, real security rules.
+
+### 2026-07-25 — Kitchen ticket state machine
+Added `advanceOrderItemStatus` (moves an item received → preparing →
+ready → served, one step at a time, no skipping or going backwards) and
+`cancelOrderItem` (only while still `received`, restocks the ingredients
+it used). Items now get a random `itemId` when created so these can
+target one specific line inside the order's items array. Ran the whole
+flow against the emulator: ordered, tried to skip a stage (blocked),
+advanced properly, tried to cancel a "preparing" item (blocked), then
+ordered + cancelled a fresh item and confirmed stock went right back to
+where it started. Next up: tables, real security rules.
