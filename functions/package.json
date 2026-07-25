@@ -11,7 +11,8 @@
     "test:rules": "node test-rules.js",
     "test:auth": "node test-auth.js",
     "test:forecast": "node test-forecast.js",
-    "test:analytics": "node test-analytics.js"
+    "test:analytics": "node test-analytics.js",
+    "test:inventory": "node test-inventory.js"
   },
   "engines": {
     "node": "24"

@@ -12,6 +12,7 @@ const tickets = require("./tickets");
 const tables = require("./tables");
 const forecast = require("./forecast");
 const analytics = require("./analytics");
+const inventory = require("./inventory");
 
 exports.addOrderItem = orders.addOrderItem;
 exports.cancelOrderItem = orders.cancelOrderItem;
@@ -22,3 +23,4 @@ exports.markTableClean = tables.markTableClean;
 exports.getStockForecast = forecast.getStockForecast;
 exports.getSalesAnalytics = analytics.getSalesAnalytics;
 exports.getTableTurnoverStats = analytics.getTableTurnoverStats;
+exports.restockIngredient = inventory.restockIngredient;
