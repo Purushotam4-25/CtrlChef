@@ -1,8 +1,11 @@
 const { getFirestore } = require("firebase-admin/firestore");
 const { HttpsError } = require("firebase-functions/https");
 
-// Shared role list, waiters handle order/table actions, managers can do anything a waiter can
+// Shared role lists, waiters handle order/table actions, managers can do anything a waiter can
 const WAITER_OR_MANAGER = ["waiter", "manager"];
+// A kitchen refusing an item it cannot cook is a real workflow, so chefs get
+// the same cancel power as waiters/managers — used by cancelOrderItem only.
+const KITCHEN_OR_SERVICE = ["waiter", "chef", "manager"];
 
 // Confirms the caller is signed in and holds one of the given roles on
 // restaurants/{restaurantId}/staff/{uid}, staff doc IDs are expected to
@@ -26,4 +29,4 @@ async function requireStaffRole(request, restaurantId, allowedRoles) {
   return staffSnap.data();
 }
 
-module.exports = { requireStaffRole, WAITER_OR_MANAGER };
+module.exports = { requireStaffRole, WAITER_OR_MANAGER, KITCHEN_OR_SERVICE };

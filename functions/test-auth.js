@@ -103,6 +103,27 @@ test("addOrderItem as waiter succeeds", async () => {
   itemId = orderSnap.data().items[orderSnap.data().items.length - 1].itemId;
 });
 
+test("cancelOrderItem as chef succeeds (kitchen can refuse what it cannot cook)", async () => {
+  // Add a second item to the same order so the item used by the
+  // advance/close tests below is untouched.
+  const addRes = await call(
+    "addOrderItem",
+    { restaurantId: RESTAURANT_ID, tableId: TABLE_ID, dishId: "chicken_tikka", qty: 1 },
+    waiter.idToken
+  );
+  assertOk(addRes, "addOrderItem for chef-cancel test");
+  const orderSnap = await db.collection("restaurants").doc(RESTAURANT_ID).collection("orders").doc(orderId).get();
+  const items = orderSnap.data().items;
+  const secondItemId = items[items.length - 1].itemId;
+
+  const res = await call(
+    "cancelOrderItem",
+    { restaurantId: RESTAURANT_ID, orderId, itemId: secondItemId },
+    chef.idToken
+  );
+  assertOk(res, "cancelOrderItem as chef");
+});
+
 test("advanceOrderItemStatus received->preparing as waiter (wrong role) is rejected", async () => {
   const res = await call(
     "advanceOrderItemStatus",

@@ -2,7 +2,7 @@ const { randomUUID } = require("crypto");
 const { onCall, HttpsError } = require("firebase-functions/https");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { computeAvailable, computeLowStock } = require("./lib/availability");
-const { requireStaffRole, WAITER_OR_MANAGER } = require("./lib/auth");
+const { requireStaffRole, WAITER_OR_MANAGER, KITCHEN_OR_SERVICE } = require("./lib/auth");
 
 const db = getFirestore();
 
@@ -134,7 +134,7 @@ exports.cancelOrderItem = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "restaurantId, orderId and itemId are required");
   }
 
-  await requireStaffRole(request, restaurantId, WAITER_OR_MANAGER);
+  await requireStaffRole(request, restaurantId, KITCHEN_OR_SERVICE);
 
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
   const orderRef = restaurantRef.collection("orders").doc(orderId);
@@ -159,8 +159,19 @@ exports.cancelOrderItem = onCall(async (request) => {
       );
     }
 
-    const dishSnap = await t.get(restaurantRef.collection("dishes").doc(item.dishId));
-    const dish = dishSnap.data();
+    // Prefer the snapshot addOrderItem took at order time — the dish may
+    // have been edited or deleted since, but the snapshot is what actually
+    // got decremented. Older items from before the snapshot existed fall
+    // back to the live dish recipe. Dish read stays here, in the reads
+    // phase, even though its result is now only used conditionally.
+    const ingredientsUsed =
+      item.ingredientsUsed || (await t.get(restaurantRef.collection("dishes").doc(item.dishId))).data()?.ingredients;
+    if (!ingredientsUsed) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Can't restore stock for ${item.dishName} — no recipe recorded`
+      );
+    }
 
     const ingredientsSnap = await t.get(ingredientsRef);
     const ingredientsById = {};
@@ -168,14 +179,15 @@ exports.cancelOrderItem = onCall(async (request) => {
       ingredientsById[doc.id] = { id: doc.id, ...doc.data() };
     });
 
-    const touchedIds = dish.ingredients.map((req) => req.ingredientId);
+    const touchedIds = ingredientsUsed.map((req) => req.ingredientId);
     const affectedSnap = await t.get(
       restaurantRef.collection("dishes").where("ingredientIds", "array-contains-any", touchedIds.slice(0, 10))
     );
 
     // --- writes: restore stock ---
-    for (const req of dish.ingredients) {
+    for (const req of ingredientsUsed) {
       const ingredient = ingredientsById[req.ingredientId];
+      if (!ingredient) continue; // ingredient since deleted — nothing to restore it to
       const restored = ingredient.currentStock + req.qtyRequired * item.qty;
       t.update(ingredientsRef.doc(req.ingredientId), {
         currentStock: restored,
