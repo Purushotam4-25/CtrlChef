@@ -51,3 +51,16 @@ Thumbs.db
 # local scratch
 tmp/
 scratch/
+
+# vendored AI agent skill docs — regenerate via `npx skills`, see skills-lock.json
+.agents/skills/
+
+# not for the shared repo
+VibeAthon_SmartRestaurant_Spec_Roadmap.md
+
+
+!firebase.json
+!firestore.rules
+!firestore.indexes.json
+!package.json
+!package-lock.json

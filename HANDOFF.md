@@ -1,9 +1,8 @@
-# AI Handoff — Shared Working Context
+# Handoff — Shared Working Context
 
-> **For any AI assistant working on this project.**
-> Read this file at the start of your session — also read `AGENTS.md` for
-> the full project rules. Update "Current State" and append a "Session Log"
-> entry before you finish.
+> Read this before starting work — also check `AGENTS.md` for the full
+> rules. Update "Current State" and add a Session Log entry when you're
+> done for the day.
 
 ## Project One-Liner
 
@@ -19,9 +18,36 @@ ngs-h — web app.
 
 ## Current State
 
-**Last updated**: 2026-07-25 by project-init
+**Last updated**: 2026-07-25
 
-Project scaffolded, no code written yet.
+Firebase's set up (`ctrlchef-b8ba2`) — Firestore, Functions, Hosting,
+emulators, all working. Spec doc stays local, not pushed.
+
+Backend's in good shape: ordering, kitchen tickets, tables, real
+security (rules + auth checks on every function), low-stock tracking +
+forecasting, manager analytics (sales, turnover), and now restocking too
+(managers can actually add stock back in, not just watch it go down).
+Code's split by domain — `orders.js`, `tickets.js`, `tables.js`,
+`forecast.js`, `analytics.js`, `inventory.js` — `index.js` just re-exports
+everything.
+
+Order items snapshot the dish's name, price, and recipe at the moment
+they're ordered, so editing or deleting a menu item later doesn't mess up
+old numbers.
+
+`closeOrder` now returns the final bill breakdown too (subtotal, service
+charge, GST, total), and staff can clock themselves in/out without a
+manager doing it for them.
+
+Tested a lot — 44 cases across 5 test suites (`test:rules`, `test:auth`,
+`test:forecast`, `test:analytics`, `test:inventory`), plus manual checks
+against real seeded data whenever something changed.
+
+Frontend hasn't started — still the default scaffold. Gemini assistant
+not built.
+
+Run emulators with `firebase emulators:start` from the repo root. Run
+`npm install` inside `functions/` first, it's not committed.
 
 ## Active Decisions
 
@@ -29,13 +55,52 @@ _(none yet)_
 
 ## Session Log
 
-> Append a new entry at the BOTTOM each session, in the order sessions
-> happen — do NOT reorder or move it to the top. (This is the opposite of
-> WORKLOG.md, which is newest-on-top. HANDOFF's log reads top-to-bottom as
-> "how we got here"; WORKLOG reads newest-first as "what do I need to know
-> right now.")
-> Format: `### YYYY-MM-DD — [AI name] — [summary]`
+> Add a new entry at the bottom each session, in order — don't reorder or
+> move it to the top. (Opposite of WORKLOG.md, which is newest-first.)
+> Format: `### YYYY-MM-DD — [summary]`
 
-### 2026-07-25 — project-init — Scaffolding
-Created initial structure: AGENTS.md, CLAUDE.md, GEMINI.md, HANDOFF.md,
-WORKLOG.md, .gitignore, src/, plans/.
+### 2026-07-25 — Scaffolding
+Set up the base project structure.
+
+### 2026-07-25 — Firebase + emulators
+Firebase project wired up, emulator suite working.
+
+### 2026-07-25 — Seed script + ordering
+Seed script plus the core order function — checks stock, decrements it,
+updates availability, all in one transaction so nothing double-spends.
+
+### 2026-07-25 — Kitchen tickets
+Orders move received → preparing → ready → served, one step at a time.
+Can cancel a line while it's still received.
+
+### 2026-07-25 — Tables
+Tables go empty → occupied → needs_cleaning → empty, each move guarded.
+
+### 2026-07-25 — Real security
+Locked everything down — Firestore rules plus auth checks on every
+function. Was wide open before this.
+
+### 2026-07-25 — Code review fixes (round 1)
+Found and fixed 3 real bugs: closing an order could skip unserved items,
+`createdBy` was spoofable, a crafted status value could crash a function.
+Also cleaned up the file structure and added an automated auth test.
+
+### 2026-07-25 — Analytics + forecasting
+Added stock forecasting and manager analytics (sales, table turnover).
+
+### 2026-07-25 — Code review fixes (round 2)
+Found and fixed a bug where deleting a menu item quietly broke historical
+sales/forecast numbers. Tightened up input validation too.
+
+### 2026-07-25 — Restocking
+Added `restockIngredient` — before this, stock only ever went down (or
+came back via a cancelled order), there was no way to record a real
+delivery. Manager-only, updates stock/lowStock/availability together like
+everything else does. Verified against real seeded data too.
+
+### 2026-07-25 — Billing breakdown + staff clock-in
+`closeOrder` now returns the actual final bill (subtotal + service charge
++ GST), not just the raw total — no new function needed, the numbers were
+already there. Also let staff clock themselves in/out — a rules tweak, a
+waiter couldn't even touch their own staff doc before this. 44 test cases
+passing now.
