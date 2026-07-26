@@ -1,12 +1,11 @@
 const { getFirestore } = require("firebase-admin/firestore");
 const { HttpsError } = require("firebase-functions/https");
 
-// Shared role list — waiters handle order/table actions, managers can do
-// anything a waiter can.
+// Shared role list, waiters handle order/table actions, managers can do anything a waiter can
 const WAITER_OR_MANAGER = ["waiter", "manager"];
 
 // Confirms the caller is signed in and holds one of the given roles on
-// restaurants/{restaurantId}/staff/{uid} — staff doc IDs are expected to
+// restaurants/{restaurantId}/staff/{uid}, staff doc IDs are expected to
 // equal the caller's Firebase Auth uid. Throws HttpsError otherwise.
 async function requireStaffRole(request, restaurantId, allowedRoles) {
   if (!request.auth) {

@@ -1,5 +1,4 @@
 // Shared by the seed script and the stock-decrement Cloud Function so both
-// compute `available` the same way.
 function computeAvailable(requiredIngredients, ingredientsById) {
   return requiredIngredients.every(({ ingredientId, qtyRequired }) => {
     const ingredient = ingredientsById[ingredientId];
@@ -7,8 +6,7 @@ function computeAvailable(requiredIngredients, ingredientsById) {
   });
 }
 
-// Same idea as computeAvailable, but per-ingredient: has stock dropped to
-// (or below) the manager-set threshold.
+// Same idea as computeAvailable, but for each ingredient, checks if its under a threshold
 function computeLowStock(ingredient) {
   return ingredient.currentStock <= ingredient.lowStockThreshold;
 }

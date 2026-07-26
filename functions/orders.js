@@ -73,7 +73,7 @@ exports.addOrderItem = onCall(async (request) => {
     // --- writes: decrement stock ---
     for (const req of dish.ingredients) {
       const ingredient = ingredientsById[req.ingredientId];
-      const newStock = ingredient.currentStock - req.qtyRequired * qty;
+      const newStock = ingredient.currentStock - (req.qtyRequired * qty);
       t.update(ingredientsRef.doc(req.ingredientId), {
         currentStock: newStock,
         lowStock: computeLowStock({ currentStock: newStock, lowStockThreshold: ingredient.lowStockThreshold }),
