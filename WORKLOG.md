@@ -4,6 +4,19 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Merge billing and manager-CRUD branches
+
+Merged `worktree-billing-split-system` and `worktree-menu-crud-tags-branding`
+into `frontend`. Fixed the reconciliation the billing branch flagged: the new
+manager Orders tab was recomputing a closed order's bill from the
+restaurant's *current* tax/service-charge settings instead of reading the
+now-persisted `order.bill` — same stale-bill bug `closeOrder` itself was just
+fixed for. `OrdersTab.jsx` now reads `order.bill` (falling back to a live
+recompute only for orders closed before that field existed) and shows
+discount and payment method too. Build clean.
+
+---
+
 ## 2026-07-27 — LLM setup ready
 
 Confirmed Blaze and saved the Gemini and Groq keys as Firebase secrets. The

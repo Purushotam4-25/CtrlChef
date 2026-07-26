@@ -53,6 +53,12 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
 ## Session Log
 
+### 2026-07-27 — Merge billing and manager-CRUD branches
+
+Merged the billing/split-bill and manager-CRUD worktree branches into
+`frontend`. Fixed the Orders tab reading a live-recomputed bill instead of
+the now-persisted `order.bill` — see `WORKLOG.md`.
+
 ### 2026-07-27 — LLM credentials ready
 
 Blaze was confirmed and Gemini/Groq keys were saved as Firebase secrets. No
