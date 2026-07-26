@@ -13,6 +13,7 @@ const tables = require("./tables");
 const forecast = require("./forecast");
 const analytics = require("./analytics");
 const inventory = require("./inventory");
+const queue = require("./queue");
 
 exports.addOrderItem = orders.addOrderItem;
 exports.cancelOrderItem = orders.cancelOrderItem;
@@ -24,3 +25,4 @@ exports.getStockForecast = forecast.getStockForecast;
 exports.getSalesAnalytics = analytics.getSalesAnalytics;
 exports.getTableTurnoverStats = analytics.getTableTurnoverStats;
 exports.restockIngredient = inventory.restockIngredient;
+exports.estimateQueueWait = queue.estimateQueueWait;

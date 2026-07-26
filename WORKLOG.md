@@ -5,6 +5,31 @@ what changed, open questions.
 
 ---
 
+## 2026-07-26 — Frontend build
+
+Built the frontend for real — Vite + React + Tailwind, off the two
+design mockups (guest surface + ops surface). Public menu/queue for
+guests, and a staff side (waiter table map, chef tickets, manager
+dashboard) behind Firebase Auth gated by role. Everything talks to the
+actual Cloud Functions and Firestore listeners, no mock data left.
+
+Added one new backend function, `estimateQueueWait` — guests need a
+wait estimate but can't read `tables` (staff-only in the rules), so it's
+computed server-side and only the estimate comes back. Also extended
+the seed script to create 3 demo staff logins (Auth + `staff` docs) so
+there's something to actually sign in with.
+
+Manager's "Assistant" tab answers its 3 fixed questions with plain
+templates over real forecast/analytics data — no Gemini function exists
+yet, so this is just the spec's own fallback tier, honestly labeled.
+
+Tested every screen against the real emulators end to end. Found one
+genuine bug this way: right after login, the redirect could fire before
+the staff doc had loaded, bouncing people back to the login screen — a
+timing race in how the auth context tracked "loading". Fixed.
+
+---
+
 ## 2026-07-25 — Billing breakdown + staff clock-in
 
 `closeOrder` now returns the actual bill (subtotal + service charge +

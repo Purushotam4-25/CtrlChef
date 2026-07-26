@@ -1,0 +1,235 @@
+import { useEffect, useMemo, useState } from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db, RESTAURANT_ID } from "../../firebase";
+import { addOrderItem, advanceOrderItemStatus, cancelOrderItem, closeOrder, markTableClean, seatTable } from "../../lib/api";
+import { fmtElapsed, fmtINR } from "../../lib/format";
+import { useOpsTheme } from "../../contexts/ThemeContext";
+import { Button, Modal, Panel, StatTile } from "../../components/ops/primitives";
+import { STATUS_COLORS } from "../../opsTheme";
+
+export default function TableMap() {
+  const { T } = useOpsTheme();
+  const [tables, setTables] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [dishes, setDishes] = useState([]);
+  const [orderModalTableId, setOrderModalTableId] = useState(null);
+  const [bill, setBill] = useState(null);
+  const [error, setError] = useState("");
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(
+    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "tables"), (snap) =>
+      setTables(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.number - b.number))
+    ),
+    []
+  );
+
+  useEffect(() => {
+    const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), where("status", "==", "open"));
+    return onSnapshot(q, (snap) => setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  useEffect(
+    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "dishes"), (snap) =>
+      setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    ),
+    []
+  );
+
+  const orderByTable = useMemo(() => {
+    const map = {};
+    orders.forEach((o) => (map[o.tableId] = o));
+    return map;
+  }, [orders]);
+
+  const occupiedCount = tables.filter((t) => t.status === "occupied").length;
+  const emptyCount = tables.filter((t) => t.status === "empty").length;
+  const cleaningCount = tables.filter((t) => t.status === "needs_cleaning").length;
+  const openTabsTotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+
+  async function run(fn) {
+    setError("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(e.message || "That didn't work.");
+    }
+  }
+
+  const modalTable = tables.find((t) => t.id === orderModalTableId);
+
+  return (
+    <div>
+      <div className="mb-3.5 flex items-baseline justify-between">
+        <div className="text-[19px] font-bold">Table Map</div>
+        <div className="text-[12.5px]" style={{ color: T.faint }}>
+          Tap a table to add items or close out.
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-3 rounded-md border border-red-800 bg-red-950/40 px-3 py-2 text-[13px] text-red-300">
+          {error}
+        </div>
+      )}
+
+      <div className="mb-4 grid grid-cols-4 gap-2.5">
+        <StatTile label="OCCUPIED" value={occupiedCount} />
+        <StatTile label="EMPTY" value={emptyCount} />
+        <StatTile label="NEEDS CLEANING" value={cleaningCount} />
+        <StatTile label="OPEN TABS" value={fmtINR(openTabsTotal)} valueColor={T.accentBright} />
+      </div>
+
+      <div className="grid grid-cols-4 gap-2.5">
+        {tables.map((t) => {
+          const order = orderByTable[t.id];
+          const sc =
+            t.status === "empty" ? STATUS_COLORS.green : t.status === "occupied" ? STATUS_COLORS.gray : STATUS_COLORS.amber;
+          const label = t.status === "empty" ? "EMPTY" : t.status === "occupied" ? "OCCUPIED" : "NEEDS CLEANING";
+          const canCloseOut = order && order.items.every((i) => i.itemStatus === "served");
+
+          return (
+            <Panel key={t.id} className="flex flex-col gap-2 p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[15px] font-bold">Table {t.number}</div>
+                <div className="text-[11px]" style={{ color: T.faint }}>
+                  {t.capacity} seats
+                </div>
+              </div>
+              <span
+                className="inline-block w-fit rounded px-1.5 py-0.5 text-[10.5px] font-bold tracking-wide"
+                style={{ background: sc.bg, color: sc.color }}
+              >
+                {label}
+              </span>
+
+              {t.status === "occupied" && (
+                <>
+                  <div className="text-[11.5px]" style={{ color: T.dim }}>
+                    Seated {t.seatedAt ? fmtElapsed(Date.now() - t.seatedAt.toDate().getTime()) : "—"} ago
+                  </div>
+                  <div className="font-mono text-[17px] font-bold" style={{ color: T.bright }}>
+                    {fmtINR(order?.totalAmount || 0)}
+                  </div>
+                  {order?.items.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      {order.items.map((item) => (
+                        <div key={item.itemId} className="flex items-center justify-between text-[12px]" style={{ color: T.dim }}>
+                          <span>
+                            {item.dishName} ×{item.qty} <span style={{ color: T.faint }}>({item.itemStatus})</span>
+                          </span>
+                          {item.itemStatus === "received" && (
+                            <button
+                              className="text-[11px] underline"
+                              style={{ color: T.faint }}
+                              onClick={() => run(() => cancelOrderItem({ orderId: order.id, itemId: item.itemId }))}
+                            >
+                              cancel
+                            </button>
+                          )}
+                          {item.itemStatus === "ready" && (
+                            <button
+                              className="text-[11px] font-semibold underline"
+                              style={{ color: T.accentBright }}
+                              onClick={() =>
+                                run(() => advanceOrderItemStatus({ orderId: order.id, itemId: item.itemId, newStatus: "served" }))
+                              }
+                            >
+                              mark served
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="mt-0.5 flex gap-1.5">
+                {(t.status === "empty" || t.status === "occupied") && (
+                  <Button
+                    variant="primary"
+                    className="min-h-[40px] flex-1"
+                    onClick={() =>
+                      t.status === "empty" ? run(() => seatTable({ tableId: t.id })) : setOrderModalTableId(t.id)
+                    }
+                  >
+                    + Order
+                  </Button>
+                )}
+                {t.status === "occupied" && (
+                  <Button
+                    variant="secondary"
+                    className="min-h-[40px]"
+                    disabled={!canCloseOut}
+                    title={canCloseOut ? "" : "Every item must be served first"}
+                    onClick={() =>
+                      run(async () => setBill((await closeOrder({ orderId: order.id })).bill))
+                    }
+                  >
+                    Bill
+                  </Button>
+                )}
+                {t.status === "needs_cleaning" && (
+                  <Button variant="primary" className="min-h-[40px] flex-1" onClick={() => run(() => markTableClean({ tableId: t.id }))}>
+                    Mark Clean
+                  </Button>
+                )}
+              </div>
+            </Panel>
+          );
+        })}
+      </div>
+
+      <Modal open={!!modalTable} onClose={() => setOrderModalTableId(null)}>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[15px] font-bold">Add to Table {modalTable?.number}</div>
+          <button style={{ color: T.dim }} className="text-lg" onClick={() => setOrderModalTableId(null)}>
+            ×
+          </button>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {dishes.map((m) => (
+            <button
+              key={m.id}
+              disabled={!m.available}
+              onClick={() => run(() => addOrderItem({ tableId: modalTable.id, dishId: m.id, qty: 1 }))}
+              className="flex items-center justify-between rounded-md border px-3 py-2.5 text-[13.5px] disabled:opacity-40"
+              style={{ background: T.panel2, borderColor: T.borderAlt, color: T.text }}
+            >
+              <span>{m.name}</span>
+              <span className="font-mono font-semibold" style={{ color: T.accentBright }}>
+                {m.available ? fmtINR(m.price) : "Sold out"}
+              </span>
+            </button>
+          ))}
+        </div>
+        <Button variant="primary" className="mt-3.5 w-full" onClick={() => setOrderModalTableId(null)}>
+          Done
+        </Button>
+      </Modal>
+
+      <Modal open={!!bill} onClose={() => setBill(null)} width={320}>
+        <div className="mb-3 text-[15px] font-bold">Final bill</div>
+        {bill && (
+          <div className="flex flex-col gap-1.5 text-[13.5px]">
+            <div className="flex justify-between"><span style={{ color: T.dim }}>Subtotal</span><span>{fmtINR(bill.subtotal)}</span></div>
+            <div className="flex justify-between"><span style={{ color: T.dim }}>Service charge</span><span>{fmtINR(bill.serviceCharge)}</span></div>
+            <div className="flex justify-between"><span style={{ color: T.dim }}>GST</span><span>{fmtINR(bill.gst)}</span></div>
+            <div className="mt-1.5 flex justify-between border-t pt-1.5 font-bold" style={{ borderColor: T.border }}>
+              <span>Total</span><span className="font-mono">{fmtINR(bill.total)}</span>
+            </div>
+          </div>
+        )}
+        <Button variant="primary" className="mt-3.5 w-full" onClick={() => setBill(null)}>
+          Done
+        </Button>
+      </Modal>
+    </div>
+  );
+}

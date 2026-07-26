@@ -18,7 +18,7 @@ ngs-h — web app.
 
 ## Current State
 
-**Last updated**: 2026-07-25
+**Last updated**: 2026-07-26
 
 Firebase's set up (`ctrlchef-b8ba2`) — Firestore, Functions, Hosting,
 emulators, all working. Spec doc stays local, not pushed.
@@ -43,11 +43,33 @@ Tested a lot — 44 cases across 5 test suites (`test:rules`, `test:auth`,
 `test:forecast`, `test:analytics`, `test:inventory`), plus manual checks
 against real seeded data whenever something changed.
 
-Frontend hasn't started — still the default scaffold. Gemini assistant
-not built.
+Frontend's built now — Vite + React + Tailwind + React Router, wired
+straight to the Cloud Functions and Firestore listeners above. Guest side
+(`/`, `/menu`, `/queue`) is public, no login. Staff side (`/waiter`,
+`/chef`, `/manager`) sits behind Firebase Auth, gated by role from each
+user's `staff` doc — a waiter only sees the table map, a chef only sees
+tickets, a manager sees everything (five tabs: analytics, inventory,
+forecast, assistant, staff).
 
-Run emulators with `firebase emulators:start` from the repo root. Run
-`npm install` inside `functions/` first, it's not committed.
+Added one small function, `estimateQueueWait` — guests need a wait
+estimate for the queue page but `tables` is staff-only in the rules, so
+this computes it server-side instead of exposing raw table data.
+
+Gemini assistant still isn't built server-side, so the manager's
+"Assistant" tab answers its 3 fixed questions with plain templates over
+real `getStockForecast`/`getSalesAnalytics` data — matches the spec's own
+tier-3 fallback plan. Swap in a real Cloud Function once Gemini/Groq
+keys exist.
+
+Seed script (`functions/seed.js`) now also creates 3 demo staff logins
+(Firebase Auth + matching `staff` docs) so the ops app has something to
+sign in with out of the box — see the script for the password.
+
+Run emulators with `firebase emulators:start` from the repo root, `npm
+run seed` inside `functions/` to load demo data, `npm run dev` at the
+root for the frontend (proxies to the hosting emulator for Firebase
+config, so no env vars needed). Run `npm install` inside `functions/`
+first, it's not committed — same for the root `node_modules`.
 
 ## Active Decisions
 
@@ -104,3 +126,12 @@ everything else does. Verified against real seeded data too.
 already there. Also let staff clock themselves in/out — a rules tweak, a
 waiter couldn't even touch their own staff doc before this. 44 test cases
 passing now.
+
+### 2026-07-26 — Frontend build
+Built the whole frontend off the design mockups — guest menu/queue,
+waiter table map, chef tickets, manager dashboard, all wired to the real
+backend (no more mock data). Added `estimateQueueWait` and seeded demo
+staff logins to make that possible. Found and fixed a real race
+condition in the auth flow (staff role wasn't loaded yet when the
+post-login redirect ran, so it bounced back to the login screen).
+Checked every screen against the emulators end to end.
