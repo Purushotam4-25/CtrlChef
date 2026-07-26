@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require("firebase-functions/https");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { requireStaffRole, WAITER_OR_MANAGER } = require("./lib/auth");
+const { computeBill, VALID_PAYMENT_METHODS } = require("./lib/billing");
 
 const db = getFirestore();
 
@@ -38,13 +39,19 @@ exports.seatTable = onCall(async (request) => {
 // early would silently orphan whatever's still on the kitchen ticket (its
 // reserved stock included), so this refuses instead. Use cancelOrderItem
 // first for anything that hasn't started cooking, or wait for the rest.
-// Also returns the final bill breakdown — billing is display-only per the
-// spec, so this is just totalAmount plus the restaurant's configured
-// service charge / GST percentages, nothing new to compute elsewhere.
+// Also computes and PERSISTS the final bill breakdown (subtotal, discount,
+// service charge, GST, total) plus the payment method — billing is
+// display-only per the spec (no real payment gateway), but the bill itself
+// has to be frozen at close time. Before this, the bill was recomputed from
+// the restaurant's CURRENT serviceChargePct/gstPct every time it was
+// displayed, so changing either later silently rewrote every past bill.
 exports.closeOrder = onCall(async (request) => {
-  const { restaurantId, orderId } = request.data;
+  const { restaurantId, orderId, discount, paymentMethod } = request.data;
   if (!restaurantId || !orderId) {
     throw new HttpsError("invalid-argument", "restaurantId and orderId are required");
+  }
+  if (!VALID_PAYMENT_METHODS.includes(paymentMethod)) {
+    throw new HttpsError("invalid-argument", `paymentMethod must be one of ${VALID_PAYMENT_METHODS.join(", ")}`);
   }
 
   await requireStaffRole(request, restaurantId, WAITER_OR_MANAGER);
@@ -76,19 +83,23 @@ exports.closeOrder = onCall(async (request) => {
       throw new HttpsError("not-found", `Table ${order.tableId} not found`);
     }
 
-    t.update(orderRef, { status: "closed", closedAt: FieldValue.serverTimestamp() });
+    const restaurant = restaurantSnap.data();
+    let bill;
+    try {
+      bill = computeBill({
+        subtotal: order.totalAmount,
+        discount: discount || null,
+        serviceChargePct: restaurant.serviceChargePct,
+        gstPct: restaurant.gstPct,
+      });
+    } catch (err) {
+      throw new HttpsError("invalid-argument", err.message);
+    }
+
+    t.update(orderRef, { status: "closed", closedAt: FieldValue.serverTimestamp(), bill, paymentMethod });
     t.update(tableRef, { status: "needs_cleaning" });
 
-    const restaurant = restaurantSnap.data();
-    const subtotal = order.totalAmount;
-    const serviceCharge = (subtotal * (restaurant.serviceChargePct || 0)) / 100;
-    const gst = (subtotal * (restaurant.gstPct || 0)) / 100;
-
-    return {
-      orderId,
-      tableStatus: "needs_cleaning",
-      bill: { subtotal, serviceCharge, gst, total: subtotal + serviceCharge + gst },
-    };
+    return { orderId, tableStatus: "needs_cleaning", bill, paymentMethod };
   });
 });
 

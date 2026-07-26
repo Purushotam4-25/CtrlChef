@@ -8,6 +8,7 @@ process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOS
 const { randomUUID } = require("crypto");
 const admin = require("firebase-admin");
 const { computeAvailable, computeLowStock } = require("./lib/availability");
+const { computeBill } = require("./lib/billing");
 
 admin.initializeApp({ projectId: "ctrlchef-b8ba2" });
 const db = admin.firestore();
@@ -214,7 +215,7 @@ async function deleteCollection(ref) {
   await Promise.all(commits);
 }
 
-async function seedOrderHistory({ restaurantRef, dishList, ingredientsById, staffUids }) {
+async function seedOrderHistory({ restaurantRef, dishList, ingredientsById, staffUids, serviceChargePct, gstPct }) {
   const ordersRef = restaurantRef.collection("orders");
   await deleteCollection(ordersRef);
 
@@ -263,6 +264,14 @@ async function seedOrderHistory({ restaurantRef, dishList, ingredientsById, staf
           consumedByIngredient[req.ingredientId] = (consumedByIngredient[req.ingredientId] || 0) + req.qtyRequired * qty;
         }
       }
+      // India-context weighting; no discounts in seed data — that branch of
+      // computeBill is already covered by a real test, and realistic demo
+      // data doesn't need it. Reusing computeBill (not hand-rolling the
+      // formula a third time) means seed data can never drift from real
+      // billing math.
+      const paymentMethod = weightedPick(rand, [["upi", 45], ["cash", 35], ["card", 20]]);
+      const bill = computeBill({ subtotal: totalAmount, discount: null, serviceChargePct, gstPct });
+
       const orderRef = ordersRef.doc(`seed_order_${String(offsetDays).padStart(2, "0")}_${String(i).padStart(3, "0")}`);
       batch.set(orderRef, {
         tableId: table.id,
@@ -272,6 +281,8 @@ async function seedOrderHistory({ restaurantRef, dishList, ingredientsById, staf
         status: "closed",
         items,
         totalAmount,
+        bill,
+        paymentMethod,
       });
       written++;
       if (written % 400 === 0) {
@@ -422,7 +433,7 @@ async function seed() {
   );
   console.log(`Staff password for all demo accounts: ${DEMO_PASSWORD}`);
 
-  await seedOrderHistory({ restaurantRef, dishList: dishes, ingredientsById, staffUids });
+  await seedOrderHistory({ restaurantRef, dishList: dishes, ingredientsById, staffUids, serviceChargePct: 5, gstPct: 5 });
   await seedLiveDemoState({ restaurantRef, dishesById, staffUids });
   console.log("Seeded 2 queue entries and one occupied table with an open order.");
 }

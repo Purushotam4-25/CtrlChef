@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addOrderItem, advanceOrderItemStatus, cancelOrderItem, closeOrder, markTableClean, seatTable } from "../../lib/api";
+import { addOrderItem, advanceOrderItemStatus, cancelOrderItem, markTableClean, seatTable } from "../../lib/api";
 import { fmtElapsed, fmtINR } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
 import { useOpsData } from "../../contexts/OpsDataContext";
@@ -7,12 +7,14 @@ import { Button, Modal, Panel, StatTile } from "../../components/ops/primitives"
 import { STATUS_COLORS } from "../../opsTheme";
 import { SkeletonGrid } from "../../components/Skeleton";
 import QueuePanel from "./QueuePanel";
+import BillModal from "./BillModal";
 
 export default function TableMap() {
   const { T } = useOpsTheme();
   const { tables, openOrders: orders, dishes, loading } = useOpsData();
   const [orderModalTableId, setOrderModalTableId] = useState(null);
-  const [bill, setBill] = useState(null);
+  const [billTarget, setBillTarget] = useState(null); // order being configured/closed
+  const [bill, setBill] = useState(null); // final result to display, once closed
   const [error, setError] = useState("");
   const [pending, setPending] = useState(new Set());
   const [tick, setTick] = useState(0);
@@ -168,11 +170,9 @@ export default function TableMap() {
                   <Button
                     variant="secondary"
                     className="min-h-[40px]"
-                    disabled={!canCloseOut || pending.has(`close-${order.id}`)}
+                    disabled={!canCloseOut}
                     title={canCloseOut ? "" : "Every item must be served first"}
-                    onClick={() =>
-                      run(`close-${order.id}`, async () => setBill((await closeOrder({ orderId: order.id })).bill))
-                    }
+                    onClick={() => setBillTarget(order)}
                   >
                     Bill
                   </Button>
@@ -223,16 +223,43 @@ export default function TableMap() {
         </Button>
       </Modal>
 
+      {billTarget && (
+        <BillModal
+          order={billTarget}
+          tableNumber={tables.find((t) => t.id === billTarget.tableId)?.number}
+          onClose={() => setBillTarget(null)}
+          onClosed={(result) => {
+            setBillTarget(null);
+            setBill(result);
+          }}
+        />
+      )}
+
       <Modal open={!!bill} onClose={() => setBill(null)} width={320}>
         <div className="mb-3 text-[15px] font-bold">Final bill</div>
         {bill && (
           <div className="flex flex-col gap-1.5 text-[13.5px]">
-            <div className="flex justify-between"><span style={{ color: T.dim }}>Subtotal</span><span>{fmtINR(bill.subtotal)}</span></div>
-            <div className="flex justify-between"><span style={{ color: T.dim }}>Service charge</span><span>{fmtINR(bill.serviceCharge)}</span></div>
-            <div className="flex justify-between"><span style={{ color: T.dim }}>GST</span><span>{fmtINR(bill.gst)}</span></div>
+            <div className="flex justify-between"><span style={{ color: T.dim }}>Subtotal</span><span>{fmtINR(bill.bill.subtotal)}</span></div>
+            {bill.bill.discountAmount > 0 && (
+              <div className="flex justify-between"><span style={{ color: T.dim }}>Discount</span><span>-{fmtINR(bill.bill.discountAmount)}</span></div>
+            )}
+            <div className="flex justify-between"><span style={{ color: T.dim }}>Service charge</span><span>{fmtINR(bill.bill.serviceCharge)}</span></div>
+            <div className="flex justify-between"><span style={{ color: T.dim }}>GST</span><span>{fmtINR(bill.bill.gst)}</span></div>
             <div className="mt-1.5 flex justify-between border-t pt-1.5 font-bold" style={{ borderColor: T.border }}>
-              <span>Total</span><span className="font-mono">{fmtINR(bill.total)}</span>
+              <span>Total</span><span className="font-mono">{fmtINR(bill.bill.total)}</span>
             </div>
+            <div className="mt-0.5 text-[11.5px] capitalize" style={{ color: T.faint }}>Paid by {bill.paymentMethod}</div>
+            {bill.split && (
+              <div className="mt-2 flex flex-col gap-1 border-t pt-2" style={{ borderColor: T.border }}>
+                <div className="text-[11.5px] font-bold" style={{ color: T.faint }}>SPLIT</div>
+                {bill.split.map((r) => (
+                  <div key={r.name} className="flex justify-between">
+                    <span>{r.name}</span>
+                    <span className="font-mono">{fmtINR(r.total)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <Button variant="primary" className="mt-3.5 w-full" onClick={() => setBill(null)}>

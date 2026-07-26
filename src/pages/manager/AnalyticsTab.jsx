@@ -95,22 +95,41 @@ export default function AnalyticsTab() {
         </Panel>
       </div>
 
-      <Panel className="p-4">
-        <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
-          Sales by Staff
-        </div>
-        {sales.byStaff.map((ss) => (
-          <div key={ss.staffId} className="flex items-center justify-between border-b py-1.5 text-[13.5px]" style={{ borderColor: T.panel2 }}>
-            <span>{ss.name}</span>
-            <span className="flex gap-4">
-              <span style={{ color: T.faint }}>{ss.orderCount} orders</span>
-              <span className="inline-block w-20 text-right font-mono font-semibold" style={{ color: T.accentBright }}>
-                {fmtINR(ss.revenue)}
-              </span>
-            </span>
+      <div className="mb-3.5 grid grid-cols-2 gap-3.5">
+        <Panel className="p-4">
+          <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
+            Sales by Staff
           </div>
-        ))}
-      </Panel>
+          {sales.byStaff.map((ss) => (
+            <div key={ss.staffId} className="flex items-center justify-between border-b py-1.5 text-[13.5px]" style={{ borderColor: T.panel2 }}>
+              <span>{ss.name}</span>
+              <span className="flex gap-4">
+                <span style={{ color: T.faint }}>{ss.orderCount} orders</span>
+                <span className="inline-block w-20 text-right font-mono font-semibold" style={{ color: T.accentBright }}>
+                  {fmtINR(ss.revenue)}
+                </span>
+              </span>
+            </div>
+          ))}
+        </Panel>
+
+        <Panel className="p-4">
+          <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
+            Sales by Payment Method
+          </div>
+          {sales.byPaymentMethod.map((pm) => (
+            <div key={pm.method} className="flex items-center justify-between border-b py-1.5 text-[13.5px]" style={{ borderColor: T.panel2 }}>
+              <span className="capitalize">{pm.method}</span>
+              <span className="flex gap-4">
+                <span style={{ color: T.faint }}>{pm.orderCount} orders</span>
+                <span className="inline-block w-20 text-right font-mono font-semibold" style={{ color: T.accentBright }}>
+                  {fmtINR(pm.revenue)}
+                </span>
+              </span>
+            </div>
+          ))}
+        </Panel>
+      </div>
 
       {turnover && (
         <div className="mt-3.5 text-[12.5px]" style={{ color: T.faint }}>

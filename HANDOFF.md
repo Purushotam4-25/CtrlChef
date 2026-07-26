@@ -19,7 +19,40 @@ from live ingredient stock instead of being toggled by hand.
 
 ## Current State
 
-**Last updated**: 2026-07-26
+**Last updated**: 2026-07-26 (billing/split-bill work, this branch —
+`worktree-billing-split-system`, branched fresh off `frontend`. A separate
+uncommitted-to-main branch from earlier the same day,
+`worktree-menu-crud-tags-branding`, adds menu/tags/staff/branding CRUD —
+the two are independent and should merge separately; see the reconciliation
+note in the latest `WORKLOG.md` entry before merging both.)
+
+`closeOrder` now computes and **persists** the real bill (`order.bill`) at
+close time instead of just handing it back once — before this, anything
+showing a closed order's bill later (a manager history view, say) had to
+recompute it from the restaurant's *current* service-charge/GST%, so
+changing either later silently rewrote every past bill. It also takes an
+optional discount (flat or %, applied before tax) and a required
+`paymentMethod` (cash/card/upi, logged for reporting only — no real payment
+gateway, matches the spec). `getSalesAnalytics` now returns a
+`byPaymentMethod` breakdown too.
+
+Bill splitting is new on the waiter's Table Map: even-split across N names,
+or by-item/seat (down to the unit for a shared multi-qty line), via a new
+pre-close `BillModal`. It's calculator-only — nothing about the split is
+sent to the backend, the order still closes in one atomic `closeOrder` call.
+The exactness guarantee (`largestRemainderSplit` in `src/lib/splitBill.js`)
+only covers each person's **total**, not a per-component breakdown — see the
+comment in that file for why (the apportionment paradox isn't worth solving
+for a calculator nothing settles against).
+
+New: `functions/lib/billing.js` (`computeBill`, shared by `closeOrder` and
+`seed.js`), `src/lib/splitBill.js`, `src/pages/waiter/BillModal.jsx`,
+`functions/test-billing.js` (`npm run test:billing`), `src/lib/test-splitBill.js`
+(`npm run test:splitBill` from root). 61 backend assertions passing across 7
+suites (was 54), plus the 4-case split-math self-check. Build clean. **Not
+manually tested in a browser this session** — no browser automation tool
+was available; verified via a clean build, the new backend suite (including
+a regression that actually proves the historical-bill fix), and code review.
 
 Firebase's set up (`ctrlchef-b8ba2`) — Firestore, Functions, Hosting,
 emulators, all working. Spec doc stays local, not pushed.
@@ -201,3 +234,19 @@ allowed. Seeded a week of backdated orders so the analytics and forecast
 screens finally have something to show. Wrote the README from scratch,
 filled in AGENTS.md, deleted `test.txt`. 47 tests passing. Deploy and
 Google OAuth are the two things still standing between this and Platinum.
+
+### 2026-07-26 — Proper billing + bill splitting
+`closeOrder` now persists the real bill (`functions/lib/billing.js`) instead
+of recomputing it from current restaurant % every time it's displayed —
+fixes a real bug where changing service-charge/GST% later would silently
+rewrite historical bills. Added discounts (flat/%, pre-tax), a required
+payment method logged for reporting, and a `byPaymentMethod` breakdown in
+analytics. Bill splitting (even or by-item, calculator-only, atomic close)
+lives in a new `BillModal` on the waiter's Table Map, backed by
+`src/lib/splitBill.js`'s largest-remainder allocation. New `test:billing`
+(7 cases, backend) and `test:splitBill` (4 cases, frontend) suites — 61
+backend assertions passing overall. Branched fresh off `frontend`, separate
+from the same-day menu/tags/branding branch — flagged the Orders-tab
+reconciliation needed when both eventually merge. Did not manually
+click through the new UI in a browser (no browser tool available this
+session) — verified via build + tests + code review instead.

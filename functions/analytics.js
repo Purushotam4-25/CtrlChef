@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require("firebase-functions/https");
 const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { requireStaffRole } = require("./lib/auth");
+const { VALID_PAYMENT_METHODS } = require("./lib/billing");
 
 const db = getFirestore();
 
@@ -45,6 +46,9 @@ exports.getSalesAnalytics = onCall(async (request) => {
   const byHour = Array.from({ length: 24 }, (_, hour) => ({ hour, qty: 0, revenue: 0 }));
   const byDayOfWeek = Array.from({ length: 7 }, (_, day) => ({ day, qty: 0, revenue: 0 }));
   const byStaff = {}; // uid -> { staffId, name, qty, revenue, orderIds }
+  const byPaymentMethod = Object.fromEntries(
+    VALID_PAYMENT_METHODS.map((method) => [method, { method, orderCount: 0, revenue: 0 }])
+  );
 
   ordersSnap.forEach((doc) => {
     const order = doc.data();
@@ -57,6 +61,14 @@ exports.getSalesAnalytics = onCall(async (request) => {
         revenue: 0,
         orderIds: new Set(),
       };
+    }
+
+    // Only closed orders carry a paymentMethod (set by closeOrder) — open
+    // orders and anything closed before this field existed are silently
+    // excluded rather than guessed at.
+    if (order.status === "closed" && order.paymentMethod && byPaymentMethod[order.paymentMethod]) {
+      byPaymentMethod[order.paymentMethod].orderCount += 1;
+      byPaymentMethod[order.paymentMethod].revenue += order.bill ? order.bill.total : order.totalAmount;
     }
 
     for (const item of order.items) {
@@ -89,7 +101,16 @@ exports.getSalesAnalytics = onCall(async (request) => {
   const slowMovers = [...byDishList].sort((a, b) => a.qty - b.qty).slice(0, 5);
   const byStaffList = Object.values(byStaff).map(({ orderIds, ...rest }) => ({ ...rest, orderCount: orderIds.size }));
 
-  return { windowDays: days, byDish: byDishList, topSellers, slowMovers, byHour, byDayOfWeek, byStaff: byStaffList };
+  return {
+    windowDays: days,
+    byDish: byDishList,
+    topSellers,
+    slowMovers,
+    byHour,
+    byDayOfWeek,
+    byStaff: byStaffList,
+    byPaymentMethod: Object.values(byPaymentMethod),
+  };
 });
 
 // Manager-only: average time a table stays open (createdAt -> closedAt),
