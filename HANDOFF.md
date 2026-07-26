@@ -19,7 +19,45 @@ from live ingredient stock instead of being toggled by hand.
 
 ## Current State
 
-**Last updated**: 2026-07-26
+**Last updated**: 2026-07-26 (manager dashboard overhaul, see below and the
+latest `WORKLOG.md` entry — this section still describes everything before
+that change; read both together for now).
+
+The manager dashboard is no longer read-mostly. It's 9 tabs, grouped
+(Operations: Orders/Tables · Catalogue: Menu/Inventory · People: Staff ·
+Insight: Analytics/Forecast/Assistant · Settings), and a manager can now
+actually create/edit/delete a dish, ingredient, table, or staff member —
+`firestore.rules` already allowed it, the UI just never existed
+(`plans/08-manager-crud.md`). New callables: `upsertDish` (derives
+`ingredientIds` server-side, computes `available` on create and edit —
+this is the one a client write genuinely can't do, since `available` is
+rule-blocked on update), `upsertIngredient`, `deleteIngredient` (flips
+dependent dishes unavailable in the same transaction as the delete),
+`forceResetTable`, `createStaffMember`. Role change and staff removal stayed
+direct Firestore writes since the rules already allow them unconditionally —
+the only new logic there is a self-lockout guard so a manager can't demote or
+delete their own account.
+
+Dietary tags are new: `restaurants/{id}.dishTags` (manager-maintained list,
+add/remove from the Menu tab) and a `tags` array per dish. Guests see badges
+on the menu and can filter by tag.
+
+Site branding (name/address/hours/service charge %/GST%) is now editable from
+a Settings tab — the `restaurants/{id}` doc already supported all of this,
+nothing could edit it before. Also fixed: the staff Login page and ops
+sidebar were still hardcoding "CtrlChef" instead of reading the doc like the
+guest side already did, and the browser tab title now updates live on both
+surfaces.
+
+52 tests passing (was 47) — new `test:menu` suite covers the two riskiest
+bits: `ingredientIds` derivation and `available` recompute on both dish
+create and edit, and the ingredient-delete cascade. **Not yet clicked through
+in an actual browser** — no browser automation tool was available this
+session, so the new manager-side forms are verified by a clean build + code
+review + the backend suite, not a manual UI pass. Do that before relying on
+this for a demo.
+
+Everything below this point describes state as of the previous session.
 
 Firebase's set up (`ctrlchef-b8ba2`) — Firestore, Functions, Hosting,
 emulators, all working. Spec doc stays local, not pushed.
@@ -201,3 +239,18 @@ allowed. Seeded a week of backdated orders so the analytics and forecast
 screens finally have something to show. Wrote the README from scratch,
 filled in AGENTS.md, deleted `test.txt`. 47 tests passing. Deploy and
 Google OAuth are the two things still standing between this and Platinum.
+
+### 2026-07-26 — Manager dashboard overhaul: full CRUD, tags, branding
+Closed the CRUD gap from `plans/08-manager-crud.md`: added Orders (read-only
+history), Tables, Menu, and Settings tabs, plus add/edit/delete on Inventory
+and Staff. New backend: `upsertDish`, `upsertIngredient`, `deleteIngredient`,
+`forceResetTable`, `createStaffMember`. Added dietary tags (manager-maintained
+list on the restaurant doc, per-dish selection, guest badges + filter). Fixed
+the staff Login page and ops sidebar to read the restaurant name instead of
+hardcoding "CtrlChef", and kept the browser tab title in sync on both
+surfaces. New `test:menu` suite (4 cases) covers `ingredientIds`
+derivation, `available` recompute on create/edit, and the ingredient-delete
+cascade — 52 tests passing overall. Did not manually click through the new UI
+in a browser this session (no browser tool available) — verified via a clean
+build, code review, and the backend suite instead. Worth a manual pass before
+a demo.

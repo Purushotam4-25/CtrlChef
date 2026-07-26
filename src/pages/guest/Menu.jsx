@@ -10,13 +10,20 @@ export default function Menu() {
   const [search, setSearch] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [category, setCategory] = useState("All");
+  const [activeTags, setActiveTags] = useState([]);
 
   const categories = useMemo(() => ["All", ...new Set(dishes.map((d) => d.category))], [dishes]);
+  const allTags = useMemo(() => [...new Set(dishes.flatMap((d) => d.tags || []))], [dishes]);
+
+  function toggleTag(tag) {
+    setActiveTags((tags) => (tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag]));
+  }
 
   const filtered = dishes.filter((d) => {
     if (vegOnly && !d.veg) return false;
     if (category !== "All" && d.category !== category) return false;
     if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (activeTags.length > 0 && !activeTags.every((t) => (d.tags || []).includes(t))) return false;
     return true;
   });
 
@@ -42,7 +49,7 @@ export default function Menu() {
         </label>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-3.5 flex flex-wrap gap-2">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -59,6 +66,25 @@ export default function Menu() {
         ))}
       </div>
 
+      {allTags.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => toggleTag(tag)}
+              className="rounded-full border px-3.5 py-1 text-[12.5px] font-semibold transition-colors hover:opacity-80"
+              style={
+                activeTags.includes(tag)
+                  ? { background: T.accent, color: "#fff", borderColor: T.accent }
+                  : { background: T.panel, color: T.faint, borderColor: T.border }
+              }
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3.5" style={{ color: T.faint }}>
         {loading && <SkeletonGrid count={6} itemClassName="h-[140px]" />}
         {!loading && filtered.map((m) => (
@@ -73,6 +99,15 @@ export default function Menu() {
             </div>
             <div className="mt-0.5 text-[11px] tracking-wide capitalize" style={{ color: T.faint }}>{m.category}</div>
             {m.desc && <div className="mt-1.5 text-[13px]" style={{ color: T.cardText }}>{m.desc}</div>}
+            {m.tags?.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {m.tags.map((tag) => (
+                  <span key={tag} className="rounded px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ background: T.panel2, color: T.faint }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="mt-2.5">
               <span
                 className="rounded-full px-2 py-0.5 text-[11px] font-bold"

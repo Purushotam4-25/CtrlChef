@@ -116,3 +116,25 @@ exports.markTableClean = onCall(async (request) => {
     return { tableId, status: "empty" };
   });
 });
+
+// Manager-only escape hatch for a table stuck in any state — the lifecycle
+// above is deliberately function-gated (firestore.rules blocks a direct
+// client write to `status`) so a genuine force-reset needs its own explicit,
+// manager-only path rather than loosening that rule.
+exports.forceResetTable = onCall(async (request) => {
+  const { restaurantId, tableId } = request.data;
+  if (!restaurantId || !tableId) {
+    throw new HttpsError("invalid-argument", "restaurantId and tableId are required");
+  }
+
+  await requireStaffRole(request, restaurantId, ["manager"]);
+
+  const tableRef = db.collection("restaurants").doc(restaurantId).collection("tables").doc(tableId);
+  const snap = await tableRef.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", `Table ${tableId} not found`);
+  }
+
+  await tableRef.update({ status: "empty", seatedAt: FieldValue.delete() });
+  return { tableId, status: "empty" };
+});

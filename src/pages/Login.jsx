@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
+import { db, RESTAURANT_ID } from "../firebase";
 
 // Firebase Auth errors are typed — worth telling "wrong password" apart from
 // "the emulator/network is down", which otherwise look identical to the user.
@@ -21,6 +23,19 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [name, setName] = useState("CtrlChef");
+
+  // This page sits outside both data providers (its own top-level route in
+  // App.jsx) — a small local listener is cheaper than restructuring the
+  // route tree for one field. restaurants/{id} is public-read, no auth
+  // needed.
+  useEffect(() => {
+    return onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setName(snap.data()?.name || "CtrlChef"));
+  }, []);
+
+  useEffect(() => {
+    document.title = name;
+  }, [name]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -47,7 +62,7 @@ export default function Login() {
             <div className="h-4 w-3 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
           </div>
           <div>
-            <div className="text-[15px] font-bold leading-tight">CtrlChef</div>
+            <div className="text-[15px] font-bold leading-tight">{name}</div>
             <div className="text-[10px] tracking-wide text-[#8a8177]">STAFF PORTAL</div>
           </div>
         </div>

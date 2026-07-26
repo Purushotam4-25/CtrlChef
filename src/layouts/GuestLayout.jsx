@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
 import { useGuestData } from "../contexts/GuestDataContext";
@@ -7,6 +8,10 @@ export default function GuestLayout() {
   const { restaurant } = useGuestData();
   const { mode, setTheme, T } = useGuestTheme();
   const name = restaurant?.name || "CtrlChef";
+
+  useEffect(() => {
+    document.title = name;
+  }, [name]);
 
   const navLinkStyle = ({ isActive }) => ({
     background: isActive ? T.accent : "transparent",
