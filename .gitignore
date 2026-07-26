@@ -55,6 +55,14 @@ scratch/
 # vendored AI agent skill docs — regenerate via `npx skills`, see skills-lock.json
 .agents/skills/
 
+# local AI assistant instructions
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# local git worktrees
+.claude/worktrees/
+
 # not for the shared repo
 VibeAthon_SmartRestaurant_Spec_Roadmap.md
 

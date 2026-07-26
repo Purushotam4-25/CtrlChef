@@ -61,4 +61,5 @@ Track what's done as work proceeds.
 
 <!-- Keep this list current. One line per plan. -->
 
-_(none yet)_
+- `13-priority-roadmap.md` — ordered P0/P1/P2 delivery guide; use it to
+  choose among the detailed numbered plans.

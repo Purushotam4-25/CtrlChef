@@ -1,193 +1,63 @@
 # CtrlChef Worklog
 
-Append-only log of work sessions. Newest entry at the top. Each entry: date,
-what changed, open questions.
+Newest entry first. Keep entries short and factual.
 
 ---
 
-## 2026-07-26 — Audit, two real bugs, demo data, README
+## 2026-07-27 — LLM setup ready
 
-Read the PS and our own spec back-to-back against the whole codebase and
-wrote the gaps up as 11 plans in `plans/`. Short version: the backend's in
-better shape than the submission is. Three things were quietly capping us
-at Bronze — the app isn't deployed anywhere (the hosting URL still 404s),
-`readme.md` was completely empty, and User Story 2 wants Google OAuth +
-OTP, which we just don't have. Silver is stories 1-3 and every tier above
-it is a superset, so that last one drags everything down with it no matter
-how good the forecasting is.
-
-Two genuine bugs fell out of the read. `cancelOrderItem` was re-reading the
-dish live instead of using the `ingredientsUsed` snapshot the order item
-already carries — so cancelling an item whose dish had since been deleted
-threw a TypeError and 500'd, and cancelling after a recipe edit put back
-the wrong quantities. Same bug we already fixed once in forecast/analytics,
-this path just got missed. The other one: the chef's Cancel button could
-never have worked at all, since `cancelOrderItem` only allowed
-waiter/manager and a chef always got permission-denied. Chefs can cancel a
-received item now, which is what a real kitchen does anyway.
-
-Seeded about 7 days of backdated orders, which is the thing that changes
-the demo most. Before this, Analytics, Forecast, table turnover, Revenue
-Tonight and two of the three Assistant answers were all empty — the
-features worked fine, they just had nothing to work on. Now there's a
-proper lunch/dinner double hump on Revenue by Hour, weekends heavier than
-weekdays, real best-sellers and slow-movers, and stock tuned so Forecast
-shows three ingredients actually trending toward stockout instead of zero
-or all eleven. It also seeds a couple of people waiting and one table
-already occupied, so the waiter map and chef board aren't blank the second
-the demo starts.
-
-Nasty one buried in that: the functions runtime reads Timestamps back in
-UTC, not this machine's local zone, so building the seed times with
-`setHours` was silently sliding the dinner peak about 5 hours into the
-afternoon. Builds them with `setUTCHours` now.
-
-Wrote the README, which was 0 bytes — team name and the hosted link are
-still TODO placeholders in it. Filled in the empty sections of AGENTS.md
-and deleted `test.txt`, which had `str cold = "yolo"` in it and was sitting
-in a repo judges are going to read.
-
-47 test cases passing now, up from 44 — new `test:orders` suite covers both
-cancel crash paths.
-
-Still open, roughly in the order it matters: deploy (needs Blaze switched
-on first), Google OAuth + email verification, then the Gemini/Groq
-assistant. Plans `01`, `02` and `07`.
+Confirmed Blaze and saved the Gemini and Groq keys as Firebase secrets. The
+assistant code still needs to be built and deployed.
 
 ---
 
-## 2026-07-26 — Frontend overhaul
+## 2026-07-26 — Delivery roadmap
 
-First round of fixes after actually using the app: renamed everything to
-CtrlChef (was still showing the mockup's placeholder "Tandoor & Tales"
-and a Bengaluru address that was never real), added a dark mode toggle
-to the guest side to match what ops already had, and gave the waiter
-screen a live queue panel — before this, guests could check in but no
-staff screen showed it or could do anything about it.
+Added `plans/13-priority-roadmap.md` to rank deployment, auth, manager CRUD,
+the LLM assistant, and later work.
 
-Also fixed the actual cause of "the menus are a little slow" — dishes
-alone had 4 separate Firestore listeners across different pages, orders
-had 3. Centralized all of that into one listener per collection per
-surface, and turned on Firestore's persistent cache so repeat visits
-don't refetch everything. Rounded it out with hover states everywhere
-(there were literally none) and made every action button disable itself
-while its request is in flight, so double-clicking doesn't fire it twice.
+---
 
-Wrote all of this up as 5 separate plans first, then worked through them
-in order and re-tested the whole app end to end against the emulators
-afterward.
+## 2026-07-26 — Audit and demo data
+
+Fixed two order bugs, seeded a week of demo history, wrote the README, and
+added tests. The suite has 47 passing cases.
+
+---
+
+## 2026-07-26 — Frontend polish
+
+Renamed the app to CtrlChef, added guest dark mode and a live queue, and
+reduced duplicate Firestore listeners.
 
 ---
 
 ## 2026-07-26 — Frontend build
 
-Built the frontend for real — Vite + React + Tailwind, off the two
-design mockups (guest surface + ops surface). Public menu/queue for
-guests, and a staff side (waiter table map, chef tickets, manager
-dashboard) behind Firebase Auth gated by role. Everything talks to the
-actual Cloud Functions and Firestore listeners, no mock data left.
-
-Added one new backend function, `estimateQueueWait` — guests need a
-wait estimate but can't read `tables` (staff-only in the rules), so it's
-computed server-side and only the estimate comes back. Also extended
-the seed script to create 3 demo staff logins (Auth + `staff` docs) so
-there's something to actually sign in with.
-
-Manager's "Assistant" tab answers its 3 fixed questions with plain
-templates over real forecast/analytics data — no Gemini function exists
-yet, so this is just the spec's own fallback tier, honestly labeled.
-
-Tested every screen against the real emulators end to end. Found one
-genuine bug this way: right after login, the redirect could fire before
-the staff doc had loaded, bouncing people back to the login screen — a
-timing race in how the auth context tracked "loading". Fixed.
+Built the guest and staff app, connected it to Firebase, and added demo staff
+accounts plus a server-side queue wait estimate.
 
 ---
 
-## 2026-07-25 — Billing breakdown + staff clock-in
+## 2026-07-25 — Billing and clock-in
 
-`closeOrder` now returns the actual bill (subtotal + service charge +
-GST + total), not just the raw total — just used numbers that already
-existed, no new function needed. Staff can also clock themselves in/out
-now — was a rules-only fix, a waiter couldn't touch their own staff doc
-at all before this. 44 test cases passing.
+Added final bill details and staff clock-in/out.
 
 ---
 
 ## 2026-07-25 — Restocking
 
-Added `restockIngredient` for managers — before this, stock only ever
-went down (or came back via a cancelled order), there was no way to
-record a real delivery arriving. Updates stock, `lowStock`, and dish
-availability together, same shape as the order functions. 41 test cases
-now passing across all 5 suites.
+Added manager-only restocking with live availability updates.
 
 ---
 
-## 2026-07-25 — Code review fixes (round 2)
+## 2026-07-25 — Analytics and forecast
 
-Deleting a menu item was quietly breaking historical sales/forecast
-numbers — fixed by having order items snapshot the dish's recipe at order
-time, same as they already do for name/price. Also tightened up input
-validation on the analytics functions. 37 test cases passing.
+Added sales analytics, table turnover, and stock forecasting.
 
 ---
 
-## 2026-07-25 — Analytics + forecasting
+## 2026-07-25 — Core operations
 
-Added stock forecasting (rolling average consumption → predicted
-stockout) and manager analytics (sales by dish/hour/day/staff, table
-turnover). Ingredients now track a `lowStock` flag too. Gemini assistant
-still on hold, needs API keys and a scope decision first.
-
----
-
-## 2026-07-25 — Code review fixes (round 1)
-
-Found and fixed 3 real bugs: closing an order could leave unserved items
-stranded, `createdBy` was spoofable, a crafted status value could crash a
-function. Also split a 350-line file into three, and added an automated
-test for the auth checks.
-
----
-
-## 2026-07-25 — Real security
-
-Locked everything down — Firestore rules plus auth checks on every
-function. Was wide open before this.
-
----
-
-## 2026-07-25 — Table state machine
-
-Tables (8 seeded) now go empty → occupied → needs_cleaning → empty,
-each move guarded so it can't happen out of order.
-
----
-
-## 2026-07-25 — Kitchen ticket state machine
-
-Orders move received → preparing → ready → served, one step at a time.
-Can cancel a line while it's still received, stock comes back correctly.
-
----
-
-## 2026-07-25 — Seed script + order/stock logic
-
-Seed script plus the core order function — checks stock, decrements it,
-updates dish availability, all in one transaction so two orders can't
-double-spend the same stock.
-
----
-
-## 2026-07-25 — Firebase emulator setup
-
-Firebase project wired up — Firestore, Functions, Hosting, emulators.
-
----
-
-## 2026-07-25 — Project scaffolded
-
-Set up the base project structure.
-
----
+Built secure ordering, kitchen tickets, tables, Firestore rules, and emulator
+support.
