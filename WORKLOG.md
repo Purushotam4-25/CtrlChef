@@ -1,7 +1,58 @@
-# ngs-h Worklog
+# CtrlChef Worklog
 
 Append-only log of work sessions. Newest entry at the top. Each entry: date,
 what changed, open questions.
+
+---
+
+## 2026-07-26 — Audit, two real bugs, demo data, README
+
+Read the PS and our own spec back-to-back against the whole codebase and
+wrote the gaps up as 11 plans in `plans/`. Short version: the backend's in
+better shape than the submission is. Three things were quietly capping us
+at Bronze — the app isn't deployed anywhere (the hosting URL still 404s),
+`readme.md` was completely empty, and User Story 2 wants Google OAuth +
+OTP, which we just don't have. Silver is stories 1-3 and every tier above
+it is a superset, so that last one drags everything down with it no matter
+how good the forecasting is.
+
+Two genuine bugs fell out of the read. `cancelOrderItem` was re-reading the
+dish live instead of using the `ingredientsUsed` snapshot the order item
+already carries — so cancelling an item whose dish had since been deleted
+threw a TypeError and 500'd, and cancelling after a recipe edit put back
+the wrong quantities. Same bug we already fixed once in forecast/analytics,
+this path just got missed. The other one: the chef's Cancel button could
+never have worked at all, since `cancelOrderItem` only allowed
+waiter/manager and a chef always got permission-denied. Chefs can cancel a
+received item now, which is what a real kitchen does anyway.
+
+Seeded about 7 days of backdated orders, which is the thing that changes
+the demo most. Before this, Analytics, Forecast, table turnover, Revenue
+Tonight and two of the three Assistant answers were all empty — the
+features worked fine, they just had nothing to work on. Now there's a
+proper lunch/dinner double hump on Revenue by Hour, weekends heavier than
+weekdays, real best-sellers and slow-movers, and stock tuned so Forecast
+shows three ingredients actually trending toward stockout instead of zero
+or all eleven. It also seeds a couple of people waiting and one table
+already occupied, so the waiter map and chef board aren't blank the second
+the demo starts.
+
+Nasty one buried in that: the functions runtime reads Timestamps back in
+UTC, not this machine's local zone, so building the seed times with
+`setHours` was silently sliding the dinner peak about 5 hours into the
+afternoon. Builds them with `setUTCHours` now.
+
+Wrote the README, which was 0 bytes — team name and the hosted link are
+still TODO placeholders in it. Filled in the empty sections of AGENTS.md
+and deleted `test.txt`, which had `str cold = "yolo"` in it and was sitting
+in a repo judges are going to read.
+
+47 test cases passing now, up from 44 — new `test:orders` suite covers both
+cancel crash paths.
+
+Still open, roughly in the order it matters: deploy (needs Blaze switched
+on first), Google OAuth + email verification, then the Gemini/Groq
+assistant. Plans `01`, `02` and `07`.
 
 ---
 

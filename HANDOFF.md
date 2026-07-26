@@ -6,7 +6,8 @@
 
 ## Project One-Liner
 
-ngs-h — web app.
+CtrlChef — smart restaurant system where dish availability is derived
+from live ingredient stock instead of being toggled by hand.
 
 ## Key Files
 
@@ -39,9 +40,9 @@ old numbers.
 charge, GST, total), and staff can clock themselves in/out without a
 manager doing it for them.
 
-Tested a lot — 44 cases across 5 test suites (`test:rules`, `test:auth`,
-`test:forecast`, `test:analytics`, `test:inventory`), plus manual checks
-against real seeded data whenever something changed.
+Tested a lot — 47 cases across 6 test suites (`test:rules`, `test:auth`,
+`test:orders`, `test:forecast`, `test:analytics`, `test:inventory`), plus
+manual checks against real seeded data whenever something changed.
 
 Frontend's built now — Vite + React + Tailwind + React Router, wired
 straight to the Cloud Functions and Firestore listeners above. Guest side
@@ -81,6 +82,40 @@ run seed` inside `functions/` to load demo data, `npm run dev` at the
 root for the frontend (proxies to the hosting emulator for Firebase
 config, so no env vars needed). Run `npm install` inside `functions/`
 first, it's not committed — same for the root `node_modules`.
+
+The seed script now also writes about 7 days of backdated orders, so
+Analytics, Forecast, turnover and Revenue Tonight all have real numbers
+instead of empty charts. Stock is tuned against that history so Forecast
+shows three ingredients trending toward stockout. It seeds a couple of
+waiting guests and one occupied table too, so no screen starts blank.
+Re-running `npm run seed` clears the old orders first, so it's safe to run
+repeatedly. The seed builds its timestamps in UTC on purpose — the
+functions runtime reads them back that way, and using local time silently
+shifts the hourly chart.
+
+There's a full audit of the repo against the PS and the spec in
+`plans/00-audit-findings.md`, with 11 numbered plans behind it. Worth
+reading before picking up anything new.
+
+**What's actually blocking the submission**, in order:
+
+1. **Not deployed.** `ctrlchef-b8ba2.web.app` still 404s. Needs Blaze
+   billing on first, and `functions/package.json` says node 24 — check
+   Firebase accepts that for deploy before relying on it. Plan `01`.
+2. **No Google OAuth, no OTP/email verification.** US2 wants both. Silver
+   is stories 1-3 and Gold/Platinum are supersets of it, so this one gap
+   caps the whole ranking. Plan `02`.
+3. **README has two TODO placeholders** — team name and the hosted link.
+4. **Assistant makes no LLM call.** Still templates over real data, which
+   is the spec's own last-resort tier and honestly labelled, but Platinum
+   wants real AI assistance. Plan `07`.
+
+Smaller things still open: seating from the queue does `seatTable` and the
+queue `updateDoc` as two separate calls, so if the second fails the table
+is occupied but the party stays waiting forever (plan `05` has the
+transactional fix); the guest home page still shows a hardcoded "~8 min"
+average wait; and the public `queue` create rule doesn't cap the name field
+or restrict which keys can be written.
 
 ## Active Decisions
 
@@ -155,3 +190,14 @@ making pages feel slow on first visit. Also added hover states across
 the board (there were none, anywhere) and stopped every action button
 from being double-clickable mid-request. Wrote it up as 5 plans in
 `plans/` first, then implemented all of them and re-verified end to end.
+
+### 2026-07-26 — Audit, bug fixes, demo data
+Audited the whole repo against the PS and the spec, wrote it up as 11
+plans in `plans/`. Fixed two real bugs: `cancelOrderItem` restored stock
+from the live dish instead of the item's `ingredientsUsed` snapshot (and
+crashed outright if the dish had been deleted), and the chef's Cancel
+button always got permission-denied because only waiter/manager were
+allowed. Seeded a week of backdated orders so the analytics and forecast
+screens finally have something to show. Wrote the README from scratch,
+filled in AGENTS.md, deleted `test.txt`. 47 tests passing. Deploy and
+Google OAuth are the two things still standing between this and Platinum.
