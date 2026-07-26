@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider, GuestThemeProvider } from "./contexts/ThemeContext";
+import { GuestDataProvider } from "./contexts/GuestDataContext";
+import { OpsDataProvider } from "./contexts/OpsDataContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import GuestLayout from "./layouts/GuestLayout";
 import OpsLayout from "./layouts/OpsLayout";
@@ -15,7 +17,15 @@ import Dashboard from "./pages/manager/Dashboard";
 export default function App() {
   return (
     <Routes>
-      <Route element={<GuestLayout />}>
+      <Route
+        element={
+          <GuestThemeProvider>
+            <GuestDataProvider>
+              <GuestLayout />
+            </GuestDataProvider>
+          </GuestThemeProvider>
+        }
+      >
         <Route path="/" element={<Home />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/queue" element={<Queue />} />
@@ -27,7 +37,9 @@ export default function App() {
       <Route
         element={
           <ThemeProvider>
-            <OpsLayout />
+            <OpsDataProvider>
+              <OpsLayout />
+            </OpsDataProvider>
           </ThemeProvider>
         }
       >

@@ -42,7 +42,7 @@ export default function OpsLayout() {
             <NavLink
               key={item.to}
               to={item.to}
-              className="flex items-center gap-2.5 rounded-md px-2.5 py-2.5 text-[13.5px] font-semibold"
+              className="flex items-center gap-2.5 rounded-md px-2.5 py-2.5 text-[13.5px] font-semibold transition-colors hover:brightness-125"
               style={({ isActive }) => ({
                 background: isActive ? T.accentSoft : "transparent",
                 color: isActive ? T.text : T.dim,
@@ -67,7 +67,7 @@ export default function OpsLayout() {
           </div>
           <button
             onClick={signOut}
-            className="mb-2 block text-[12px] underline"
+            className="mb-2 block text-[12px] underline transition-opacity hover:opacity-70"
             style={{ color: T.faint }}
           >
             Sign out
@@ -78,14 +78,14 @@ export default function OpsLayout() {
           >
             <button
               onClick={() => setTheme("dark")}
-              className="flex-1 rounded py-1.5 text-[11.5px] font-semibold"
+              className="flex-1 rounded py-1.5 text-[11.5px] font-semibold transition-colors hover:brightness-125"
               style={{ background: mode === "dark" ? T.accent : "transparent", color: mode === "dark" ? "#fff" : T.dim }}
             >
               Dark
             </button>
             <button
               onClick={() => setTheme("light")}
-              className="flex-1 rounded py-1.5 text-[11.5px] font-semibold"
+              className="flex-1 rounded py-1.5 text-[11.5px] font-semibold transition-colors hover:brightness-125"
               style={{ background: mode === "light" ? T.accent : "transparent", color: mode === "light" ? "#fff" : T.dim }}
             >
               Light

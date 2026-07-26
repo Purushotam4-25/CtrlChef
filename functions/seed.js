@@ -92,8 +92,9 @@ const tables = [
 async function seed() {
   const restaurantRef = db.collection("restaurants").doc(RESTAURANT_ID);
   await restaurantRef.set({
-    name: "Tandoor & Tales",
+    name: "CtrlChef",
     cuisine: "Indian multi-cuisine",
+    address: "", // no real address yet — guest UI hides the line when empty
     serviceChargePct: 5,
     gstPct: 5,
   });

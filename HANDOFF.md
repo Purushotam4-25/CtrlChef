@@ -65,6 +65,17 @@ Seed script (`functions/seed.js`) now also creates 3 demo staff logins
 (Firebase Auth + matching `staff` docs) so the ops app has something to
 sign in with out of the box — see the script for the password.
 
+Real name is CtrlChef, not the mockup's placeholder "Tandoor & Tales" —
+fixed everywhere, and restaurant name/address/hours now come from the
+`restaurants/{id}` doc instead of being hardcoded in JSX (address/hours
+are blank until someone fills in the real ones). Both surfaces have a
+dark/light toggle now, guest included. Waiter screen has a live queue
+panel next to the table grid — seats a party straight from the queue,
+picking any empty table that fits. Data fetching is centralized now too
+— one Firestore listener per collection per surface (`GuestDataContext`,
+`OpsDataContext`) instead of every page opening its own, plus a
+persistent Firestore cache so repeat visits don't refetch from scratch.
+
 Run emulators with `firebase emulators:start` from the repo root, `npm
 run seed` inside `functions/` to load demo data, `npm run dev` at the
 root for the frontend (proxies to the hosting emulator for Firebase
@@ -135,3 +146,12 @@ staff logins to make that possible. Found and fixed a real race
 condition in the auth flow (staff role wasn't loaded yet when the
 post-login redirect ran, so it bounced back to the login screen).
 Checked every screen against the emulators end to end.
+
+### 2026-07-26 — Frontend overhaul
+Rebranded to CtrlChef (was still the mockup's placeholder name/address),
+added dark mode to the guest side, gave the waiter a live queue they can
+actually act on, and cut the duplicate Firestore listeners that were
+making pages feel slow on first visit. Also added hover states across
+the board (there were none, anywhere) and stopped every action button
+from being double-clickable mid-request. Wrote it up as 5 plans in
+`plans/` first, then implemented all of them and re-verified end to end.

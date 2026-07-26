@@ -13,6 +13,7 @@ export default function InventoryTab({ ingredients }) {
   const [restockTarget, setRestockTarget] = useState(null);
   const [qty, setQty] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   function sortBy(key) {
     if (key === sortKey) setSortDir((d) => -d);
@@ -39,22 +40,25 @@ export default function InventoryTab({ ingredients }) {
       setError("Enter a positive amount.");
       return;
     }
+    setSubmitting(true);
     try {
       await restockIngredient({ ingredientId: restockTarget.id, qtyAdded });
       setRestockTarget(null);
       setQty("");
     } catch (e) {
       setError(e.message || "That didn't work.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <Panel className="overflow-hidden">
       <div className="grid grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr] border-b px-4 py-2.5" style={{ borderColor: T.border }}>
-        <button className="text-left text-[11.5px] font-bold" style={{ color: T.faint }} onClick={() => sortBy("name")}>
+        <button className="text-left text-[11.5px] font-bold transition-opacity hover:opacity-70" style={{ color: T.faint }} onClick={() => sortBy("name")}>
           INGREDIENT {arrow("name")}
         </button>
-        <button className="text-left text-[11.5px] font-bold" style={{ color: T.faint }} onClick={() => sortBy("stock")}>
+        <button className="text-left text-[11.5px] font-bold transition-opacity hover:opacity-70" style={{ color: T.faint }} onClick={() => sortBy("stock")}>
           STOCK {arrow("stock")}
         </button>
         <div className="text-[11.5px] font-bold" style={{ color: T.faint }}>
@@ -103,8 +107,8 @@ export default function InventoryTab({ ingredients }) {
             style={{ background: T.inputBg, borderColor: T.borderAlt, color: T.text }}
           />
           {error && <div className="mb-3 text-[13px] text-red-400">{error}</div>}
-          <Button variant="primary" type="submit" className="w-full">
-            Confirm restock
+          <Button variant="primary" type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Restocking…" : "Confirm restock"}
           </Button>
         </form>
       </Modal>

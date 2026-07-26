@@ -5,6 +5,29 @@ what changed, open questions.
 
 ---
 
+## 2026-07-26 — Frontend overhaul
+
+First round of fixes after actually using the app: renamed everything to
+CtrlChef (was still showing the mockup's placeholder "Tandoor & Tales"
+and a Bengaluru address that was never real), added a dark mode toggle
+to the guest side to match what ops already had, and gave the waiter
+screen a live queue panel — before this, guests could check in but no
+staff screen showed it or could do anything about it.
+
+Also fixed the actual cause of "the menus are a little slow" — dishes
+alone had 4 separate Firestore listeners across different pages, orders
+had 3. Centralized all of that into one listener per collection per
+surface, and turned on Firestore's persistent cache so repeat visits
+don't refetch everything. Rounded it out with hover states everywhere
+(there were literally none) and made every action button disable itself
+while its request is in flight, so double-clicking doesn't fire it twice.
+
+Wrote all of this up as 5 separate plans first, then worked through them
+in order and re-tested the whole app end to end against the emulators
+afterward.
+
+---
+
 ## 2026-07-26 — Frontend build
 
 Built the frontend for real — Vite + React + Tailwind, off the two

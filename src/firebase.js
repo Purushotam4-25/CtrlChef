@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator, persistentLocalCache } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // The hosting emulator (proxied by vite.config.js in dev, served for real in
@@ -10,7 +10,10 @@ const config = await fetch("/__/firebase/init.json").then((res) => res.json());
 
 export const app = initializeApp(config);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Persistent (IndexedDB) cache instead of the default memory-only one — repeat
+// visits (even after a full reload) can serve straight from cache instead of
+// re-fetching every collection from scratch.
+export const db = initializeFirestore(app, { localCache: persistentLocalCache() });
 export const functions = getFunctions(app);
 
 const isLocalhost = ["localhost", "127.0.0.1"].includes(location.hostname);

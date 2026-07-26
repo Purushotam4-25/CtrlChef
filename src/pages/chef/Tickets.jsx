@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { db, RESTAURANT_ID } from "../../firebase";
+import { useEffect, useRef, useState } from "react";
 import { advanceOrderItemStatus, cancelOrderItem } from "../../lib/api";
 import { fmtElapsed } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
+import { useOpsData } from "../../contexts/OpsDataContext";
 import { Button, Panel } from "../../components/ops/primitives";
 
 // ponytail: elapsed time is measured from when the item was first ordered
@@ -25,28 +24,19 @@ const COLUMNS = [
 
 export default function Tickets() {
   const { T } = useOpsTheme();
-  const [orders, setOrders] = useState([]);
-  const [tableNumberById, setTableNumberById] = useState({});
+  const { openOrders: orders, tables } = useOpsData();
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(new Set());
+  const [, setTick] = useState(0);
+  const errorTimeout = useRef(null);
 
   useEffect(() => {
-    const t = setInterval(() => setOrders((o) => [...o]), 30000);
+    const t = setInterval(() => setTick((n) => n + 1), 30000);
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), where("status", "==", "open"));
-    return onSnapshot(q, (snap) => setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
-  }, []);
-
-  useEffect(
-    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "tables"), (snap) => {
-      const map = {};
-      snap.forEach((d) => (map[d.id] = d.data().number));
-      setTableNumberById(map);
-    }),
-    []
-  );
+  const tableNumberById = {};
+  tables.forEach((t) => (tableNumberById[t.id] = t.number));
 
   const tickets = { received: [], preparing: [], ready: [] };
   orders.forEach((order) => {
@@ -64,12 +54,21 @@ export default function Tickets() {
   });
   Object.values(tickets).forEach((list) => list.sort((a, b) => a.addedAtMs - b.addedAtMs));
 
-  async function run(fn) {
+  async function run(key, fn) {
     setError("");
+    setPending((p) => new Set(p).add(key));
     try {
       await fn();
     } catch (e) {
       setError(e.message || "That didn't work.");
+      clearTimeout(errorTimeout.current);
+      errorTimeout.current = setTimeout(() => setError(""), 5000);
+    } finally {
+      setPending((p) => {
+        const next = new Set(p);
+        next.delete(key);
+        return next;
+      });
     }
   }
 
@@ -115,13 +114,15 @@ export default function Tickets() {
                         <Button
                           variant="primary"
                           className="flex-1"
-                          onClick={() => run(() => advanceOrderItemStatus({ orderId: tk.orderId, itemId: tk.itemId, newStatus: "preparing" }))}
+                          disabled={pending.has(`start-${tk.itemId}`)}
+                          onClick={() => run(`start-${tk.itemId}`, () => advanceOrderItemStatus({ orderId: tk.orderId, itemId: tk.itemId, newStatus: "preparing" }))}
                         >
                           Start
                         </Button>
                         <Button
                           variant="secondary"
-                          onClick={() => run(() => cancelOrderItem({ orderId: tk.orderId, itemId: tk.itemId }))}
+                          disabled={pending.has(`cancel-${tk.itemId}`)}
+                          onClick={() => run(`cancel-${tk.itemId}`, () => cancelOrderItem({ orderId: tk.orderId, itemId: tk.itemId }))}
                         >
                           Cancel
                         </Button>
@@ -131,7 +132,8 @@ export default function Tickets() {
                       <Button
                         variant="primary"
                         className="flex-1"
-                        onClick={() => run(() => advanceOrderItemStatus({ orderId: tk.orderId, itemId: tk.itemId, newStatus: "ready" }))}
+                        disabled={pending.has(`ready-${tk.itemId}`)}
+                        onClick={() => run(`ready-${tk.itemId}`, () => advanceOrderItemStatus({ orderId: tk.orderId, itemId: tk.itemId, newStatus: "ready" }))}
                       >
                         Ready
                       </Button>

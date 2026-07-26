@@ -29,7 +29,7 @@ async function setup() {
   // reads or tries to mutate.
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const restaurantRef = context.firestore().collection("restaurants").doc(RESTAURANT_ID);
-    await restaurantRef.set({ name: "Tandoor & Tales" });
+    await restaurantRef.set({ name: "CtrlChef" });
     await restaurantRef.collection("dishes").doc("paneer_tikka").set({ name: "Paneer Tikka", price: 220, available: true });
     await restaurantRef.collection("ingredients").doc("paneer").set({ name: "Paneer", currentStock: 8, lowStockThreshold: 2 });
     await restaurantRef.collection("tables").doc("table_1").set({ number: 1, capacity: 2, status: "empty" });

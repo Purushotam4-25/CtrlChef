@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { deleteField, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db, RESTAURANT_ID } from "../../firebase";
 import { fmtElapsed, fmtTime } from "../../lib/format";
@@ -9,15 +10,21 @@ import { Badge, Panel } from "../../components/ops/primitives";
 // staff flip their own clockedIn field without a manager doing it for them.
 export default function StaffTab({ staff }) {
   const { T } = useOpsTheme();
+  const [pendingId, setPendingId] = useState(null);
 
-  function toggle(person) {
+  async function toggle(person) {
+    setPendingId(person.id);
     const ref = doc(db, "restaurants", RESTAURANT_ID, "staff", person.id);
-    return updateDoc(
-      ref,
-      person.clockedIn
-        ? { clockedIn: false, clockedInAt: deleteField() }
-        : { clockedIn: true, clockedInAt: serverTimestamp() }
-    );
+    try {
+      await updateDoc(
+        ref,
+        person.clockedIn
+          ? { clockedIn: false, clockedInAt: deleteField() }
+          : { clockedIn: true, clockedInAt: serverTimestamp() }
+      );
+    } finally {
+      setPendingId(null);
+    }
   }
 
   return (
@@ -47,7 +54,12 @@ export default function StaffTab({ staff }) {
           </div>
           <div className="flex items-center gap-2">
             <Badge kind={p.clockedIn ? "green" : "gray"}>{p.clockedIn ? "ON SHIFT" : "OFF SHIFT"}</Badge>
-            <button className="text-[11px] underline" style={{ color: T.faint }} onClick={() => toggle(p)}>
+            <button
+              className="text-[11px] underline transition-opacity hover:opacity-70 disabled:opacity-40"
+              style={{ color: T.faint }}
+              disabled={pendingId === p.id}
+              onClick={() => toggle(p)}
+            >
               {p.clockedIn ? "Clock out" : "Clock in"}
             </button>
           </div>
