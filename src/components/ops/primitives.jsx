@@ -40,6 +40,12 @@ export function Badge({ kind = "gray", children }) {
   );
 }
 
+const BUTTON_HOVER_CLASS = {
+  primary: "hover:brightness-110",
+  secondary: "hover:brightness-125",
+  ghost: "hover:opacity-70",
+};
+
 export function Button({ variant = "primary", className = "", style, ...rest }) {
   const { T } = useOpsTheme();
   const variants = {
@@ -49,7 +55,7 @@ export function Button({ variant = "primary", className = "", style, ...rest }) 
   };
   return (
     <button
-      className={`rounded-md px-3 py-2 text-[13px] font-semibold cursor-pointer font-sans disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`rounded-md px-3 py-2 text-[13px] font-semibold cursor-pointer font-sans transition-[filter,opacity] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:hover:opacity-50 ${BUTTON_HOVER_CLASS[variant]} ${className}`}
       style={{ ...variants[variant], ...style }}
       {...rest}
     />

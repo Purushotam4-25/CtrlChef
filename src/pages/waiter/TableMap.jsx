@@ -1,45 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { db, RESTAURANT_ID } from "../../firebase";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addOrderItem, advanceOrderItemStatus, cancelOrderItem, closeOrder, markTableClean, seatTable } from "../../lib/api";
 import { fmtElapsed, fmtINR } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
+import { useOpsData } from "../../contexts/OpsDataContext";
 import { Button, Modal, Panel, StatTile } from "../../components/ops/primitives";
 import { STATUS_COLORS } from "../../opsTheme";
+import { SkeletonGrid } from "../../components/Skeleton";
+import QueuePanel from "./QueuePanel";
 
 export default function TableMap() {
   const { T } = useOpsTheme();
-  const [tables, setTables] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [dishes, setDishes] = useState([]);
+  const { tables, openOrders: orders, dishes, loading } = useOpsData();
   const [orderModalTableId, setOrderModalTableId] = useState(null);
   const [bill, setBill] = useState(null);
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(new Set());
   const [tick, setTick] = useState(0);
+  const errorTimeout = useRef(null);
 
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 30000);
     return () => clearInterval(t);
   }, []);
-
-  useEffect(
-    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "tables"), (snap) =>
-      setTables(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.number - b.number))
-    ),
-    []
-  );
-
-  useEffect(() => {
-    const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), where("status", "==", "open"));
-    return onSnapshot(q, (snap) => setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
-  }, []);
-
-  useEffect(
-    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "dishes"), (snap) =>
-      setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-    ),
-    []
-  );
 
   const orderByTable = useMemo(() => {
     const map = {};
@@ -52,12 +34,24 @@ export default function TableMap() {
   const cleaningCount = tables.filter((t) => t.status === "needs_cleaning").length;
   const openTabsTotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
 
-  async function run(fn) {
+  // Guards against double-submits (e.g. clicking + Order twice before the
+  // first call round-trips) by disabling just the one button mid-flight,
+  // keyed per action rather than locking the whole page.
+  async function run(key, fn) {
     setError("");
+    setPending((p) => new Set(p).add(key));
     try {
       await fn();
     } catch (e) {
       setError(e.message || "That didn't work.");
+      clearTimeout(errorTimeout.current);
+      errorTimeout.current = setTimeout(() => setError(""), 5000);
+    } finally {
+      setPending((p) => {
+        const next = new Set(p);
+        next.delete(key);
+        return next;
+      });
     }
   }
 
@@ -78,15 +72,20 @@ export default function TableMap() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-4 gap-2.5">
-        <StatTile label="OCCUPIED" value={occupiedCount} />
-        <StatTile label="EMPTY" value={emptyCount} />
-        <StatTile label="NEEDS CLEANING" value={cleaningCount} />
-        <StatTile label="OPEN TABS" value={fmtINR(openTabsTotal)} valueColor={T.accentBright} />
-      </div>
+      <div className="grid grid-cols-[260px_1fr] items-start gap-4">
+        <QueuePanel tables={tables} onError={(msg) => setError(msg)} />
 
-      <div className="grid grid-cols-4 gap-2.5">
-        {tables.map((t) => {
+        <div>
+          <div className="mb-4 grid grid-cols-4 gap-2.5">
+            <StatTile label="OCCUPIED" value={occupiedCount} />
+            <StatTile label="EMPTY" value={emptyCount} />
+            <StatTile label="NEEDS CLEANING" value={cleaningCount} />
+            <StatTile label="OPEN TABS" value={fmtINR(openTabsTotal)} valueColor={T.accentBright} />
+          </div>
+
+          <div className="grid grid-cols-4 gap-2.5">
+            {loading && <SkeletonGrid count={8} itemClassName="h-[150px] text-neutral-500" />}
+            {!loading && tables.map((t) => {
           const order = orderByTable[t.id];
           const sc =
             t.status === "empty" ? STATUS_COLORS.green : t.status === "occupied" ? STATUS_COLORS.gray : STATUS_COLORS.amber;
@@ -125,19 +124,21 @@ export default function TableMap() {
                           </span>
                           {item.itemStatus === "received" && (
                             <button
-                              className="text-[11px] underline"
+                              className="text-[11px] underline transition-opacity hover:opacity-70 disabled:opacity-40"
                               style={{ color: T.faint }}
-                              onClick={() => run(() => cancelOrderItem({ orderId: order.id, itemId: item.itemId }))}
+                              disabled={pending.has(`cancel-${item.itemId}`)}
+                              onClick={() => run(`cancel-${item.itemId}`, () => cancelOrderItem({ orderId: order.id, itemId: item.itemId }))}
                             >
                               cancel
                             </button>
                           )}
                           {item.itemStatus === "ready" && (
                             <button
-                              className="text-[11px] font-semibold underline"
+                              className="text-[11px] font-semibold underline transition-opacity hover:opacity-70 disabled:opacity-40"
                               style={{ color: T.accentBright }}
+                              disabled={pending.has(`serve-${item.itemId}`)}
                               onClick={() =>
-                                run(() => advanceOrderItemStatus({ orderId: order.id, itemId: item.itemId, newStatus: "served" }))
+                                run(`serve-${item.itemId}`, () => advanceOrderItemStatus({ orderId: order.id, itemId: item.itemId, newStatus: "served" }))
                               }
                             >
                               mark served
@@ -155,8 +156,9 @@ export default function TableMap() {
                   <Button
                     variant="primary"
                     className="min-h-[40px] flex-1"
+                    disabled={t.status === "empty" && pending.has(`seat-${t.id}`)}
                     onClick={() =>
-                      t.status === "empty" ? run(() => seatTable({ tableId: t.id })) : setOrderModalTableId(t.id)
+                      t.status === "empty" ? run(`seat-${t.id}`, () => seatTable({ tableId: t.id })) : setOrderModalTableId(t.id)
                     }
                   >
                     + Order
@@ -166,30 +168,37 @@ export default function TableMap() {
                   <Button
                     variant="secondary"
                     className="min-h-[40px]"
-                    disabled={!canCloseOut}
+                    disabled={!canCloseOut || pending.has(`close-${order.id}`)}
                     title={canCloseOut ? "" : "Every item must be served first"}
                     onClick={() =>
-                      run(async () => setBill((await closeOrder({ orderId: order.id })).bill))
+                      run(`close-${order.id}`, async () => setBill((await closeOrder({ orderId: order.id })).bill))
                     }
                   >
                     Bill
                   </Button>
                 )}
                 {t.status === "needs_cleaning" && (
-                  <Button variant="primary" className="min-h-[40px] flex-1" onClick={() => run(() => markTableClean({ tableId: t.id }))}>
+                  <Button
+                    variant="primary"
+                    className="min-h-[40px] flex-1"
+                    disabled={pending.has(`clean-${t.id}`)}
+                    onClick={() => run(`clean-${t.id}`, () => markTableClean({ tableId: t.id }))}
+                  >
                     Mark Clean
                   </Button>
                 )}
               </div>
             </Panel>
           );
-        })}
+            })}
+          </div>
+        </div>
       </div>
 
       <Modal open={!!modalTable} onClose={() => setOrderModalTableId(null)}>
         <div className="mb-3 flex items-center justify-between">
           <div className="text-[15px] font-bold">Add to Table {modalTable?.number}</div>
-          <button style={{ color: T.dim }} className="text-lg" onClick={() => setOrderModalTableId(null)}>
+          <button style={{ color: T.dim }} className="text-lg transition-opacity hover:opacity-70" onClick={() => setOrderModalTableId(null)}>
             ×
           </button>
         </div>
@@ -197,9 +206,9 @@ export default function TableMap() {
           {dishes.map((m) => (
             <button
               key={m.id}
-              disabled={!m.available}
-              onClick={() => run(() => addOrderItem({ tableId: modalTable.id, dishId: m.id, qty: 1 }))}
-              className="flex items-center justify-between rounded-md border px-3 py-2.5 text-[13.5px] disabled:opacity-40"
+              disabled={!m.available || pending.has(`add-${m.id}`)}
+              onClick={() => run(`add-${m.id}`, () => addOrderItem({ tableId: modalTable.id, dishId: m.id, qty: 1 }))}
+              className="flex items-center justify-between rounded-md border px-3 py-2.5 text-[13.5px] transition-colors hover:brightness-125 disabled:opacity-40 disabled:hover:brightness-100"
               style={{ background: T.panel2, borderColor: T.borderAlt, color: T.text }}
             >
               <span>{m.name}</span>

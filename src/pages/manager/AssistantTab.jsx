@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db, RESTAURANT_ID } from "../../firebase";
+import { useState } from "react";
 import { getSalesAnalytics, getStockForecast } from "../../lib/api";
 import { fmtHour, fmtINR } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
+import { useOpsData } from "../../contexts/OpsDataContext";
 import { Panel } from "../../components/ops/primitives";
 
 // No Gemini function exists yet (see functions/) — this is the spec's own
@@ -12,16 +11,9 @@ import { Panel } from "../../components/ops/primitives";
 // Swap these for a Cloud Function call once the Gemini/Groq layer lands.
 export default function AssistantTab() {
   const { T } = useOpsTheme();
-  const [dishes, setDishes] = useState([]);
+  const { dishes } = useOpsData();
   const [history, setHistory] = useState([]);
   const [busy, setBusy] = useState(false);
-
-  useEffect(
-    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "dishes"), (snap) =>
-      setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-    ),
-    []
-  );
 
   async function ask(question, answerFn) {
     setBusy(true);
@@ -81,7 +73,7 @@ export default function AssistantTab() {
             key={q.text}
             disabled={busy}
             onClick={q.onAsk}
-            className="rounded-md border px-3 py-2.5 text-left text-[13.5px] disabled:opacity-60"
+            className="rounded-md border px-3 py-2.5 text-left text-[13.5px] transition-colors hover:brightness-125 disabled:opacity-60 disabled:hover:brightness-100"
             style={{ background: T.panel2, borderColor: T.borderAlt, color: T.text }}
           >
             {q.text}

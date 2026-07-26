@@ -2,6 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
+// Firebase Auth errors are typed — worth telling "wrong password" apart from
+// "the emulator/network is down", which otherwise look identical to the user.
+function loginErrorMessage(err) {
+  if (err.code === "auth/network-request-failed") {
+    return "Can't reach the auth server — is it running?";
+  }
+  if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
+    return "Couldn't sign in — check the email and password.";
+  }
+  return "Couldn't sign in — something went wrong. Try again.";
+}
+
 export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -18,7 +30,7 @@ export default function Login() {
       await signIn(email, password);
       navigate("/staff", { replace: true });
     } catch (err) {
-      setError("Couldn't sign in — check the email and password.");
+      setError(loginErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -64,12 +76,12 @@ export default function Login() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-md bg-[#c2662f] py-2.5 text-[13.5px] font-bold text-white disabled:opacity-60"
+          className="w-full rounded-md bg-[#c2662f] py-2.5 text-[13.5px] font-bold text-white transition-[filter] hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
 
-        <a href="/menu" className="mt-4 block text-center text-[12.5px] text-[#8a8177]">
+        <a href="/menu" className="mt-4 block text-center text-[12.5px] text-[#8a8177] transition-opacity hover:opacity-70">
           ← Back to the public menu
         </a>
       </form>

@@ -1,18 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db, RESTAURANT_ID } from "../../firebase";
+import { useMemo, useState } from "react";
+import { useGuestData } from "../../contexts/GuestDataContext";
+import { useGuestTheme } from "../../contexts/ThemeContext";
+import { SkeletonGrid } from "../../components/Skeleton";
 import { fmtINR } from "../../lib/format";
 
 export default function Menu() {
-  const [dishes, setDishes] = useState([]);
+  const { dishes, loading } = useGuestData();
+  const { T } = useGuestTheme();
   const [search, setSearch] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [category, setCategory] = useState("All");
-
-  useEffect(() => {
-    const dishesRef = collection(db, "restaurants", RESTAURANT_ID, "dishes");
-    return onSnapshot(dishesRef, (snap) => setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
-  }, []);
 
   const categories = useMemo(() => ["All", ...new Set(dishes.map((d) => d.category))], [dishes]);
 
@@ -25,9 +22,9 @@ export default function Menu() {
 
   return (
     <div className="mx-auto max-w-[1240px] px-8 pb-14 pt-10">
-      <div className="mb-1 text-[11px] font-semibold tracking-wide text-guest-faint">LIVE TONIGHT</div>
+      <div className="mb-1 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>LIVE TONIGHT</div>
       <h1 className="mb-2 font-serif text-[32px] font-bold">The menu</h1>
-      <div className="mb-5 text-sm text-guest-dim">
+      <div className="mb-5 text-sm" style={{ color: T.dim }}>
         Availability updates as orders come in. Greyed items are out for the night.
       </div>
 
@@ -36,7 +33,8 @@ export default function Menu() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search paneer, biryani, naan..."
-          className="flex-1 rounded-md border border-guest-border bg-guest-panel px-3.5 py-2.5 text-[13.5px] text-guest-text outline-none"
+          className="flex-1 rounded-md border px-3.5 py-2.5 text-[13.5px] outline-none"
+          style={{ borderColor: T.border, background: T.panel, color: T.text }}
         />
         <label className="flex items-center gap-1.5 whitespace-nowrap text-[13px]">
           <input type="checkbox" checked={vegOnly} onChange={(e) => setVegOnly(e.target.checked)} />
@@ -49,11 +47,11 @@ export default function Menu() {
           <button
             key={cat}
             onClick={() => setCategory(cat)}
-            className="rounded-full border px-4 py-1.5 text-[13px] font-semibold capitalize"
+            className="rounded-full border px-4 py-1.5 text-[13px] font-semibold capitalize transition-colors hover:opacity-80"
             style={
               category === cat
-                ? { background: "#A35D3A", color: "#fff", borderColor: "#A35D3A" }
-                : { background: "#FBF6EC", color: "#302B27", borderColor: "#E4D9C3" }
+                ? { background: T.accent, color: "#fff", borderColor: T.accent }
+                : { background: T.panel, color: T.text, borderColor: T.border }
             }
           >
             {cat}
@@ -61,26 +59,27 @@ export default function Menu() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-3.5">
-        {filtered.map((m) => (
+      <div className="grid grid-cols-3 gap-3.5" style={{ color: T.faint }}>
+        {loading && <SkeletonGrid count={6} itemClassName="h-[140px]" />}
+        {!loading && filtered.map((m) => (
           <div
             key={m.id}
-            className="rounded-lg border border-guest-border p-4"
-            style={{ background: m.available ? "#FBF6EC" : "#EFE7D8" }}
+            className="rounded-lg border p-4"
+            style={{ borderColor: T.border, background: m.available ? T.panel : T.panel2, color: T.text }}
           >
             <div className="flex justify-between">
               <div className="text-[15px] font-bold">{m.name}</div>
               <div className="font-mono font-bold">{fmtINR(m.price)}</div>
             </div>
-            <div className="mt-0.5 text-[11px] tracking-wide text-guest-faint capitalize">{m.category}</div>
-            {m.desc && <div className="mt-1.5 text-[13px] text-[#4a4038]">{m.desc}</div>}
+            <div className="mt-0.5 text-[11px] tracking-wide capitalize" style={{ color: T.faint }}>{m.category}</div>
+            {m.desc && <div className="mt-1.5 text-[13px]" style={{ color: T.cardText }}>{m.desc}</div>}
             <div className="mt-2.5">
               <span
                 className="rounded-full px-2 py-0.5 text-[11px] font-bold"
                 style={
                   m.available
-                    ? { background: "rgba(94,120,98,0.15)", color: "#5E7862" }
-                    : { background: "rgba(139,123,99,0.2)", color: "#8A7A63" }
+                    ? { background: T.pillOkBg, color: T.pillOkText }
+                    : { background: T.pillOffBg, color: T.pillOffText }
                 }
               >
                 {m.available ? "Available" : "Sold out"}
@@ -88,7 +87,9 @@ export default function Menu() {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && <div className="col-span-3 text-sm text-guest-faint">No dishes match that search.</div>}
+        {!loading && filtered.length === 0 && (
+          <div className="col-span-3 text-sm" style={{ color: T.faint }}>No dishes match that search.</div>
+        )}
       </div>
     </div>
   );
