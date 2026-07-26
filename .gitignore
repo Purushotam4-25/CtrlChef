@@ -58,6 +58,10 @@ scratch/
 # not for the shared repo
 VibeAthon_SmartRestaurant_Spec_Roadmap.md
 
+# plans are local scratch — never commit them, keep the README template though
+plans/*.md
+!plans/README.md
+
 
 !firebase.json
 !firestore.rules
