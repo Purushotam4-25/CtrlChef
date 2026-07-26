@@ -9,19 +9,32 @@ import InventoryTab from "./InventoryTab";
 import ForecastTab from "./ForecastTab";
 import AssistantTab from "./AssistantTab";
 import StaffTab from "./StaffTab";
+import OrdersTab from "./OrdersTab";
+import TablesTab from "./TablesTab";
+import MenuTab from "./MenuTab";
+import SettingsTab from "./SettingsTab";
 
-const TABS = [
-  { key: "analytics", label: "Analytics" },
-  { key: "inventory", label: "Inventory" },
-  { key: "forecast", label: "Forecast" },
-  { key: "assistant", label: "Assistant" },
-  { key: "staff", label: "Staff" },
+// Grouped now that there are 9 tabs — a flat row of that many stopped being
+// scannable. Still a plain wrapping bar, not a nested/dropdown nav.
+const TAB_GROUPS = [
+  { group: "Operations", items: [{ key: "orders", label: "Orders" }, { key: "tables", label: "Tables" }] },
+  { group: "Catalogue", items: [{ key: "menu", label: "Menu" }, { key: "inventory", label: "Inventory" }] },
+  { group: "People", items: [{ key: "staff", label: "Staff" }] },
+  {
+    group: "Insight",
+    items: [
+      { key: "analytics", label: "Analytics" },
+      { key: "forecast", label: "Forecast" },
+      { key: "assistant", label: "Assistant" },
+    ],
+  },
+  { group: "Settings", items: [{ key: "settings", label: "Settings" }] },
 ];
 
 export default function Dashboard() {
   const { T } = useOpsTheme();
   const [tab, setTab] = useState("analytics");
-  const { ingredients, staffList, openOrders, queueList } = useOpsData();
+  const { restaurant, ingredients, dishes, staffList, tables, openOrders, allOrders, queueList } = useOpsData();
   const [revenueTonight, setRevenueTonight] = useState(0);
 
   useEffect(() => {
@@ -45,24 +58,35 @@ export default function Dashboard() {
         <StatTile label="GUESTS WAITING" value={queueList.length} />
       </div>
 
-      <div className="mb-4 flex gap-1.5 border-b pb-2.5" style={{ borderColor: T.border }}>
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className="rounded-md px-3.5 py-1.5 text-[13px] font-semibold transition-colors hover:brightness-125"
-            style={{ background: tab === t.key ? T.accent : "transparent", color: tab === t.key ? "#fff" : T.dim }}
-          >
-            {t.label}
-          </button>
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b pb-2.5" style={{ borderColor: T.border }}>
+        {TAB_GROUPS.map((g) => (
+          <div key={g.group} className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold tracking-wide" style={{ color: T.faintest }}>
+              {g.group.toUpperCase()}
+            </span>
+            {g.items.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className="rounded-md px-3.5 py-1.5 text-[13px] font-semibold transition-colors hover:brightness-125"
+                style={{ background: tab === t.key ? T.accent : "transparent", color: tab === t.key ? "#fff" : T.dim }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         ))}
       </div>
 
+      {tab === "orders" && <OrdersTab orders={allOrders} restaurant={restaurant} tables={tables} staffList={staffList} />}
+      {tab === "tables" && <TablesTab tables={tables} />}
+      {tab === "menu" && <MenuTab dishes={dishes} ingredients={ingredients} restaurant={restaurant} />}
+      {tab === "inventory" && <InventoryTab ingredients={ingredients} dishes={dishes} />}
+      {tab === "staff" && <StaffTab staff={staffList} />}
       {tab === "analytics" && <AnalyticsTab />}
-      {tab === "inventory" && <InventoryTab ingredients={ingredients} />}
       {tab === "forecast" && <ForecastTab />}
       {tab === "assistant" && <AssistantTab />}
-      {tab === "staff" && <StaffTab staff={staffList} />}
+      {tab === "settings" && <SettingsTab restaurant={restaurant} />}
     </div>
   );
 }

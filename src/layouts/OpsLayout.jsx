@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useOpsData } from "../contexts/OpsDataContext";
 import { useOpsTheme } from "../contexts/ThemeContext";
 
 const NAV_ITEMS = [
@@ -10,8 +12,14 @@ const NAV_ITEMS = [
 
 export default function OpsLayout() {
   const { staff, signOut } = useAuth();
+  const { restaurant } = useOpsData();
   const { mode, setTheme, T } = useOpsTheme();
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(staff?.role));
+  const name = restaurant?.name || "CtrlChef";
+
+  useEffect(() => {
+    document.title = name;
+  }, [name]);
 
   return (
     <div
@@ -30,7 +38,7 @@ export default function OpsLayout() {
             <div className="h-4 w-3 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
           </div>
           <div>
-            <div className="text-[15px] font-bold leading-tight">CtrlChef</div>
+            <div className="text-[15px] font-bold leading-tight">{name}</div>
             <div className="text-[10px] tracking-wide" style={{ color: T.faint }}>
               FLOOR OPERATIONS
             </div>

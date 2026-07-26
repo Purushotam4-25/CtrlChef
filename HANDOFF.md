@@ -8,8 +8,9 @@ Read this first, then check `AGENTS.md` and `plans/`.
 
 CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
-forecasting, analytics, billing (with discounts and bill splitting), and the
-public menu are working locally.
+forecasting, analytics, billing (with discounts and bill splitting), the full
+manager dashboard (menu/inventory/tables/staff CRUD, dietary tags, site
+branding), and the public menu are working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -25,7 +26,8 @@ yet. The app is not deployed yet.
    app.
 2. Add Google sign-in, email verification, signup, and password reset.
 3. Build the manager-only LLM assistant with Gemini → Groq → template fallback.
-4. Add manager operations screens: Orders, Tables, Menu, and Inventory CRUD.
+4. Manually click through the new manager CRUD screens and billing/split-bill
+   UI in a browser — both merged in without a manual pass.
 
 Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
@@ -42,8 +44,9 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
 - The seed script is deliberately emulator-first. Do not point it at
   production without an explicit production-seeding plan.
-- Current tests: 47 across rules, auth, orders, forecast, analytics, and
-  inventory, plus 7 billing cases and a 4-case split-math self-check.
+- Current tests: 52 across rules, auth, orders, forecast, analytics,
+  inventory, and menu CRUD, plus 7 billing cases and a 4-case split-math
+  self-check.
 - Existing staff demo accounts are created by `functions/seed.js`.
 - Google sign-in does not grant a staff role on its own. A matching `staff`
   document is still required.
@@ -74,6 +77,17 @@ shared Firestore listeners.
 
 Built the guest and staff interfaces and connected them to Firebase. Added a
 server-side queue wait estimate and demo staff accounts.
+
+### 2026-07-26 — Manager dashboard overhaul: full CRUD, tags, branding
+
+Closed the CRUD gap from `plans/08-manager-crud.md`: added Orders (read-only
+history), Tables, Menu, and Settings tabs, plus add/edit/delete on Inventory
+and Staff. New backend: `upsertDish`, `upsertIngredient`, `deleteIngredient`,
+`forceResetTable`, `createStaffMember`. Added dietary tags (manager-maintained
+list on the restaurant doc, per-dish selection, guest badges + filter). Fixed
+the staff Login page and ops sidebar to read the restaurant name instead of
+hardcoding "CtrlChef", and kept the browser tab title in sync on both
+surfaces. See `WORKLOG.md` for details.
 
 ### 2026-07-26 — Proper billing: persisted bills, discounts, bill splitting
 

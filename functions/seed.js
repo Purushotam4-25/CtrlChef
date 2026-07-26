@@ -371,6 +371,7 @@ async function seed() {
     address: "", // no real address yet — guest UI hides the line when empty
     serviceChargePct: 5,
     gstPct: 5,
+    dishTags: ["Vegan", "Vegetarian", "High Protein", "High Carb", "Low Carb", "Gluten-Free", "Healthy", "Spicy"],
   });
 
   const ingredientsById = {};

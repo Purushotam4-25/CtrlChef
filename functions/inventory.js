@@ -63,3 +63,74 @@ exports.restockIngredient = onCall(async (request) => {
     return { ingredientId, currentStock: newStock };
   });
 });
+
+// Manager-only add/edit. `currentStock` is only accepted on create — editing
+// it afterwards stays restockIngredient's job (firestore.rules blocks a
+// direct client write from touching it), so an update here only ever
+// changes name/unit/lowStockThreshold and recomputes `lowStock` from the
+// ingredient's existing stock.
+exports.upsertIngredient = onCall(async (request) => {
+  const { restaurantId, ingredientId, name, unit } = request.data;
+  const lowStockThreshold = Number(request.data.lowStockThreshold);
+
+  if (!restaurantId || !name || typeof name !== "string" || !unit || typeof unit !== "string" || !Number.isFinite(lowStockThreshold) || lowStockThreshold < 0) {
+    throw new HttpsError("invalid-argument", "name, unit, and a non-negative lowStockThreshold are required");
+  }
+
+  await requireStaffRole(request, restaurantId, ["manager"]);
+
+  const restaurantRef = db.collection("restaurants").doc(restaurantId);
+  const ingredientsRef = restaurantRef.collection("ingredients");
+
+  if (!ingredientId) {
+    const currentStock = Number(request.data.currentStock);
+    if (!Number.isFinite(currentStock) || currentStock < 0) {
+      throw new HttpsError("invalid-argument", "A non-negative currentStock is required when creating an ingredient");
+    }
+    const ref = ingredientsRef.doc();
+    await ref.set({
+      name,
+      unit,
+      lowStockThreshold,
+      currentStock,
+      lowStock: computeLowStock({ currentStock, lowStockThreshold }),
+    });
+    return { ingredientId: ref.id };
+  }
+
+  const ref = ingredientsRef.doc(ingredientId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", `Ingredient ${ingredientId} not found`);
+  }
+  const currentStock = snap.data().currentStock;
+  await ref.update({ name, unit, lowStockThreshold, lowStock: computeLowStock({ currentStock, lowStockThreshold }) });
+  return { ingredientId };
+});
+
+// Manager-only delete. Root-cause fix for a real gap: deleting an
+// ingredient a dish still needs would otherwise leave that dish silently
+// `available: true` until something unrelated happened to recompute it.
+// This does the recompute in the same transaction as the delete.
+exports.deleteIngredient = onCall(async (request) => {
+  const { restaurantId, ingredientId } = request.data;
+  if (!restaurantId || !ingredientId) {
+    throw new HttpsError("invalid-argument", "restaurantId and ingredientId are required");
+  }
+
+  await requireStaffRole(request, restaurantId, ["manager"]);
+
+  const restaurantRef = db.collection("restaurants").doc(restaurantId);
+  const ingredientRef = restaurantRef.collection("ingredients").doc(ingredientId);
+
+  return db.runTransaction(async (t) => {
+    const affectedSnap = await t.get(
+      restaurantRef.collection("dishes").where("ingredientIds", "array-contains", ingredientId)
+    );
+
+    affectedSnap.forEach((doc) => t.update(doc.ref, { available: false }));
+    t.delete(ingredientRef);
+
+    return { deleted: true, affectedDishIds: affectedSnap.docs.map((d) => d.id) };
+  });
+});

@@ -11,6 +11,56 @@ assistant code still needs to be built and deployed.
 
 ---
 
+## 2026-07-26 — Manager dashboard overhaul: full CRUD, dietary tags, branding
+
+The manager dashboard went from read-mostly to actually managing the
+restaurant, closing the exact gap `plans/08-manager-crud.md` flagged: nothing
+could create, edit, or delete a dish, ingredient, table, or staff member even
+though `firestore.rules` already allowed all of it for a manager. Nine tabs
+now, grouped (Operations / Catalogue / People / Insight / Settings) instead of
+one flat row.
+
+New: an Orders tab (read-only order history — the only place a closed order is
+visible anywhere in the UI), a Tables tab (add/edit/delete, plus a manager-only
+`forceResetTable` for a table stuck mid-lifecycle), a Menu tab (dish
+add/edit/delete via a new `upsertDish` callable), and a Settings tab (site
+name, address, hours, service charge %, GST % — all fields the `restaurants/{id}`
+doc already had but nothing could edit). Inventory got add/edit/delete
+(`upsertIngredient`, `deleteIngredient`); Staff got add (`createStaffMember`,
+needs the Admin SDK to pair an Auth user with a staff doc), role change, and
+remove — with a self-lockout guard so a manager can't demote or delete
+themselves.
+
+Dietary tags are new too: `restaurants/{id}.dishTags` is a manager-maintained
+list (seeded with 8 defaults), `dishes.tags` picks from it per dish. Guests see
+tag badges on the menu and can filter by them, same pattern as the existing
+category/veg filters.
+
+The one real correctness risk here — `upsertDish` deriving `ingredientIds`
+server-side instead of trusting a client copy, since that flat array powers
+the `array-contains-any` availability queries in `orders.js`/`inventory.js` —
+got its own test suite (`test:menu`, 4 cases) rather than just manual checking.
+Same suite also proves `deleteIngredient` flips dependent dishes to
+unavailable in the same transaction as the delete, instead of leaving them
+silently `available: true` until an unrelated order happened to touch one of
+their ingredients.
+
+Branding was partially wired already (guest side read `restaurant.name` with
+a fallback) but the staff Login page and ops sidebar still hardcoded
+"CtrlChef", and nothing updated the browser tab title. Both now read the same
+doc, with `document.title` kept in sync on both surfaces.
+
+52 test cases now (was 47), all 6 suites passing. `npm run build` clean, no
+new chunk-size issues. Couldn't click through the new UI in an actual browser
+in this session — no browser automation tool available — so the manager-side
+forms are verified by code review + a clean build + the backend test suite,
+not a manual click-through. Worth doing that pass before this ships for real.
+
+Confirmed Blaze and saved the Gemini and Groq keys as Firebase secrets. The
+assistant code still needs to be built and deployed.
+
+---
+
 ## 2026-07-26 — Proper billing: persisted bills, discounts, split checks
 
 `closeOrder` used to compute a bill and hand it back once, never saving it —
