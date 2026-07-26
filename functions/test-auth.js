@@ -175,7 +175,7 @@ test("seatTable with no auth is rejected", async () => {
 });
 
 test("closeOrder as waiter succeeds once every item is served, with the right bill", async () => {
-  const res = await call("closeOrder", { restaurantId: RESTAURANT_ID, orderId }, waiter.idToken);
+  const res = await call("closeOrder", { restaurantId: RESTAURANT_ID, orderId, paymentMethod: "cash" }, waiter.idToken);
   assertOk(res, "closeOrder as waiter");
 
   // chicken_tikka x1 @ 260, demo-restaurant-1 is seeded at 5% service charge + 5% GST.

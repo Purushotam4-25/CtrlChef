@@ -8,7 +8,8 @@ Read this first, then check `AGENTS.md` and `plans/`.
 
 CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
-forecasting, analytics, and the public menu are working locally.
+forecasting, analytics, billing (with discounts and bill splitting), and the
+public menu are working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -42,7 +43,7 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 - The seed script is deliberately emulator-first. Do not point it at
   production without an explicit production-seeding plan.
 - Current tests: 47 across rules, auth, orders, forecast, analytics, and
-  inventory.
+  inventory, plus 7 billing cases and a 4-case split-math self-check.
 - Existing staff demo accounts are created by `functions/seed.js`.
 - Google sign-in does not grant a staff role on its own. A matching `staff`
   document is still required.
@@ -73,6 +74,13 @@ shared Firestore listeners.
 
 Built the guest and staff interfaces and connected them to Firebase. Added a
 server-side queue wait estimate and demo staff accounts.
+
+### 2026-07-26 — Proper billing: persisted bills, discounts, bill splitting
+
+`closeOrder` now persists the computed bill instead of recomputing it from
+the restaurant's current tax/service-charge settings, added discounts (flat
+or %) and a required payment method, and waiters can split a check evenly or
+by item before closing. See `WORKLOG.md` for details.
 
 ### 2026-07-25 — Billing and clock-in
 

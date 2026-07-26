@@ -11,6 +11,46 @@ assistant code still needs to be built and deployed.
 
 ---
 
+## 2026-07-26 — Proper billing: persisted bills, discounts, split checks
+
+`closeOrder` used to compute a bill and hand it back once, never saving it —
+so anywhere that showed a closed order's bill later had to recompute it from
+the restaurant's *current* service-charge/GST %. Change either later and
+every past bill silently changes with it. Fixed by persisting the actual
+bill (`order.bill`) at close time, computed by a new shared
+`functions/lib/billing.js`.
+
+Same change adds what `closeOrder` was missing to be a real billing step:
+discounts (flat or %, applied before tax), and a required payment method
+(cash/card/upi) logged for reporting — no real payment gateway, the spec
+keeps that explicitly out of scope, this is just a manually-picked tag.
+`getSalesAnalytics` now breaks sales down by payment method too.
+
+Bill splitting is new: a waiter can split a check evenly across N names, or
+by assigning specific items (down to the unit, for shared multi-qty lines)
+to named people, before closing. It's a calculator, not a settlement system
+— nothing about the split is sent to the backend or persisted, the order
+still closes atomically in one `closeOrder` call once everyone's amount is
+shown. The one real algorithm here is `largestRemainderSplit` in the new
+`src/lib/splitBill.js` — makes sure split shares always sum exactly to the
+real total (no fractional-rupee drift), which matters because these are
+numbers people actually hand over in cash.
+
+Seed data now writes a `bill` + weighted `paymentMethod` per backdated order
+too, reusing the real `computeBill` instead of a fourth copy of the tax
+formula. New `test:billing` suite (7 cases) — including the one that
+actually proves the fix: close an order, change `gstPct`, confirm the
+already-closed order's bill didn't move. 61 backend assertions passing now
+across 7 suites, plus a small framework-free self-check for the split math
+(`src/lib/test-splitBill.js`, `npm run test:splitBill`).
+
+Branched fresh off `frontend`, not off the (separate, also uncommitted)
+menu/tags/branding work from earlier today — the two are independent and
+merged separately. The manager Orders tab reads `order.bill` directly
+instead of recomputing it, now that it's persisted.
+
+---
+
 ## 2026-07-26 — Delivery roadmap
 
 Added `plans/13-priority-roadmap.md` to rank deployment, auth, manager CRUD,

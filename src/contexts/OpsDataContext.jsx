@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { collection, doc, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { db, RESTAURANT_ID } from "../firebase";
 import { useAuth } from "./AuthContext";
 
@@ -12,6 +12,7 @@ const OpsDataContext = createContext(null);
 // anyone else per firestore.rules, so there's nothing to fetch before then.
 export function OpsDataProvider({ children }) {
   const { staff: currentStaff } = useAuth();
+  const [restaurant, setRestaurant] = useState(null);
   const [tables, setTables] = useState([]);
   const [openOrders, setOpenOrders] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -19,6 +20,13 @@ export function OpsDataProvider({ children }) {
   const [dishes, setDishes] = useState([]);
   const [queueList, setQueueList] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentStaff) return;
+    // TableMap needs the restaurant's live serviceChargePct/gstPct to
+    // preview a bill before closeOrder runs.
+    return onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setRestaurant(snap.data() || null));
+  }, [currentStaff]);
 
   useEffect(() => {
     if (!currentStaff) return;
@@ -66,7 +74,9 @@ export function OpsDataProvider({ children }) {
   }, [currentStaff]);
 
   return (
-    <OpsDataContext.Provider value={{ tables, openOrders, ingredients, staffList, dishes, queueList, loading }}>
+    <OpsDataContext.Provider
+      value={{ restaurant, tables, openOrders, ingredients, staffList, dishes, queueList, loading }}
+    >
       {children}
     </OpsDataContext.Provider>
   );
