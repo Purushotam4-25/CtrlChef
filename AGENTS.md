@@ -1,12 +1,19 @@
-# ngs-h
+# CtrlChef
 
 Web app.
 
 ## What this is
 
-<!-- Fill in: the actual purpose, the core mechanism/approach, and what
-"done" or "correct" looks like for this project. This is the part a fresh
-session can't infer from the code alone. -->
+CtrlChef is a smart restaurant management system (VibeAthon 6.0 hackathon
+submission). Core idea: dish availability is derived from live ingredient
+stock, not manually toggled — ordering a dish decrements the ingredients
+it uses inside a Firestore transaction, and every dish sharing an affected
+ingredient gets its `available` flag recomputed in that same transaction.
+Guests get a public menu/queue with no login; staff (waiter, chef,
+manager) sign in and see role-gated tools for orders, kitchen tickets,
+tables, inventory, and analytics. "Correct" here means stock and
+availability never drift out of sync, even under concurrent orders — see
+`functions/orders.js`.
 
 ## Rules for every session
 
@@ -23,34 +30,43 @@ session can't infer from the code alone. -->
 
 | Path | Role |
 |---|---|
-| `src/` | application source |
+| `src/` | frontend application source (Vite + React) |
+| `functions/` | Cloud Functions backend — orders, tickets, tables, inventory, forecast, analytics, auth |
+| `firestore.rules` | Firestore security rules |
 | `HANDOFF.md` | cross-session/cross-agent state, read first |
 | `WORKLOG.md` | running changelog, newest first |
 | `plans/` | one file per plan, shared across AI assistants |
 
-<!-- Extend as real directories appear. Keep it to paths whose purpose isn't
-obvious from the name. -->
-
 ## Dev environment / commands
 
-<!-- Fill in exact commands with flags, e.g.
 | Task | Command |
 |---|---|
-| install | |
-| dev server | |
-| test | |
-| typecheck / lint | |
-| build (as CI/host runs it) | |
--->
+| install (frontend) | `npm install` (repo root) |
+| install (functions) | `npm install` inside `functions/` — separate install, easy to miss |
+| emulators | `firebase emulators:start` (repo root) |
+| seed demo data | `npm run seed` inside `functions/`, with emulators running |
+| dev server | `npm run dev` (repo root) |
+| build | `npm run build` (repo root) |
+| tests | `npm run test:rules` / `test:auth` / `test:forecast` / `test:analytics` / `test:inventory`, inside `functions/`, with emulators running |
 
 ## Deployment
 
-<!-- Host + how a deploy is triggered; required env var names (never values)
-and where they're set; anything stateful (database, migrations, storage). -->
+`firebase deploy` from the repo root ships hosting (`dist/`, built by
+`npm run build`), Cloud Functions, and Firestore rules/indexes together.
+Firebase project: `ctrlchef-b8ba2`. Requires the Blaze billing plan —
+Cloud Functions need it even within the free tier. No env vars to set:
+the frontend fetches Firebase config from `/__/firebase/init.json` at
+runtime.
 
 ## Working agreement
 
-<!-- Leave blank until a real convention emerges. -->
+- Backend lives in `functions/`, split by domain (`orders.js`,
+  `tickets.js`, `tables.js`, `forecast.js`, `analytics.js`,
+  `inventory.js`); `index.js` just re-exports.
+- Every state-changing client action goes through a Cloud Function, never
+  a direct Firestore write — enforced in `firestore.rules` and re-checked
+  server-side in `functions/lib/auth.js`.
+- Run the relevant `functions/` test suite after touching backend logic.
 
 ## Known issues / open decisions
 
