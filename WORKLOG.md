@@ -4,6 +4,41 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Members: optional customer login, order history, "usuals"
+
+`members/{uid}` had rules but nothing in the app ever touched it. `AuthContext`
+now checks for a member doc alongside the staff one and exposes `accountType`
+("staff" | "member" | null); anyone who signs in with neither gets provisioned
+as a member automatically (rules already allowed exactly that write). Member
+signup itself lives on a new `/account` page — email/password, no Google
+sign-in yet, same as staff.
+
+Plan 05 (queue lifecycle) hasn't landed on this branch yet, so orders link to
+a member the simpler way: the waiter attaches one by search when starting a
+tab (`TableMap.jsx`), and `addOrderItem` takes it as an optional `memberId`
+that's only ever set on the order-creation branch — nothing about the
+stock-decrement transaction changed.
+
+Two new member-scoped callables (`functions/members.js`), same "narrow read
+via a callable" pattern `estimateQueueWait` already uses rather than loosening
+the isStaff-only rule on `orders`: `getMyOrderHistory` and
+`getMyRecommendations` (top dishes by order frequency, filtered to what's
+still `available` right now — plain counting, not a model, labelled that way
+on the menu same as the forecast tab is honest about being a heuristic). Both
+check `request.auth.uid` against the memberId being asked for.
+
+Guest menu shows a "Your usuals" strip above the grid when signed in with
+history; new `/account/orders` page lists past orders; manager dashboard got
+a Customers tab (visits, spend, favourite dish, last visit — client-side
+aggregation over `members` + the same capped `allOrders` the Orders tab
+already reads). No points, no loyalty tiers — frequency-history only, on
+purpose.
+
+New `test:members` suite (5 cases). Re-ran `test:auth` too since `addOrderItem`
+changed shape — still 13/13, no regressions from the new optional field.
+
+---
+
 ## 2026-07-27 — Merge billing and manager-CRUD branches
 
 Merged `worktree-billing-split-system` and `worktree-menu-crud-tags-branding`

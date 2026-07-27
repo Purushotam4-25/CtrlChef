@@ -9,8 +9,9 @@ Read this first, then check `AGENTS.md` and `plans/`.
 CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
 forecasting, analytics, billing (with discounts and bill splitting), the full
-manager dashboard (menu/inventory/tables/staff CRUD, dietary tags, site
-branding), and the public menu are working locally.
+manager dashboard (menu/inventory/tables/staff CRUD, customers, dietary tags,
+site branding), the public menu, and optional customer accounts (members) are
+working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -45,13 +46,26 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 - The seed script is deliberately emulator-first. Do not point it at
   production without an explicit production-seeding plan.
 - Current tests: 52 across rules, auth, orders, forecast, analytics,
-  inventory, and menu CRUD, plus 7 billing cases and a 4-case split-math
-  self-check.
+  inventory, and menu CRUD, plus 7 billing cases, a 4-case split-math
+  self-check, and 5 member cases.
 - Existing staff demo accounts are created by `functions/seed.js`.
 - Google sign-in does not grant a staff role on its own. A matching `staff`
   document is still required.
+- Members are separate from staff — self-signup at `/account`, no manager
+  provisioning needed. A signed-in user with neither a `staff` nor a `members`
+  doc gets turned into a member automatically (see `AuthContext.jsx`); there's
+  no dedicated "you have no account" screen because nothing in the current
+  sign-in paths can actually land there.
+- Order-to-member linking is waiter-driven (search-and-attach at the table,
+  in `TableMap.jsx`), not guest self-service from the queue — that's the
+  simpler of the two options plan 09 offered, since the queue-lifecycle work
+  (plan 05) hasn't landed on this branch yet. Revisit once it does.
 
 ## Session Log
+
+### 2026-07-27 — Members: login, order history, usuals, Customers tab
+
+Built out plan 09. See `WORKLOG.md` for the full breakdown.
 
 ### 2026-07-27 — Merge billing and manager-CRUD branches
 
