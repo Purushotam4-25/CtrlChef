@@ -1,9 +1,17 @@
 // One-off script: writes demo menu + ingredient data into Firestore.
 // Run: npm run seed  (inside functions/, with the Firestore emulator running)
 //
-// Defaults to the local emulator so this can never accidentally write to prod.
-process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "localhost:8080";
-process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || "localhost:9099";
+// Defaults to the local emulator so this can never accidentally write to
+// prod. Set SEED_PROD=true to target the real project instead (needs
+// GOOGLE_APPLICATION_CREDENTIALS pointing at a service account key).
+//
+// Note the old approach of just unsetting FIRESTORE_EMULATOR_HOST doesn't
+// work — `||=` treats "unset" as "fill in the default", the opposite of
+// what you'd want. This flag is the actual opt-in.
+if (process.env.SEED_PROD !== "true") {
+  process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "localhost:8080";
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || "localhost:9099";
+}
 
 const { randomUUID } = require("crypto");
 const admin = require("firebase-admin");
@@ -12,6 +20,11 @@ const { computeBill } = require("./lib/billing");
 
 admin.initializeApp({ projectId: "ctrlchef-b8ba2" });
 const db = admin.firestore();
+// Some networks (corporate proxy, VPN, antivirus doing HTTP/2 inspection)
+// silently swallow the gRPC transport the SDK uses by default — the process
+// just hangs forever with no error. REST works everywhere gRPC does and
+// costs nothing for a one-off script.
+db.settings({ preferRest: true });
 
 const RESTAURANT_ID = "demo-restaurant-1";
 

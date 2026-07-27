@@ -4,6 +4,29 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Forecast/Assistant hung silently on a failed call
+
+Neither had error handling — a failed `getStockForecast`/`getSalesAnalytics`
+call left Forecast stuck on "Loading forecast…" forever and Assistant just
+did nothing. Added a real error message to both. Root cause of the actual
+failures they hit was unrelated to this code: several Gen 2 functions
+(Cloud Run under the hood) weren't set to allow public invocation, so calls
+403'd before reaching the function at all — fixed per-function in the Cloud
+Run console (Security tab → Allow public access), not something deploy or
+code can fix on its own.
+
+## 2026-07-27 — seed.js couldn't actually seed prod, and hung forever trying
+
+Two real bugs, both in `seed.js`. First: `preferRest: true` added on the
+Firestore client — on some networks (VPN, antivirus doing HTTP/2 inspection)
+the default gRPC transport just hangs with zero error, forever. Second, and
+the bigger one: the "unset FIRESTORE_EMULATOR_HOST to hit prod" guidance
+(mine, from earlier today) was backwards — `||=` fills in the emulator
+default when the var is *unset*, so there was never a way to reach
+production through env vars alone. Replaced it with an explicit
+`SEED_PROD=true` opt-in. Confirmed both fixes work with a one-off write
+against real Firestore before patching the script properly.
+
 ## 2026-07-27 — Login stuck on "Loading…" for a signed-in account with no staff doc
 
 Firestore rules deny reading a staff doc that doesn't exist (the isStaff

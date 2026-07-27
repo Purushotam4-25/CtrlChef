@@ -20,6 +20,8 @@ export default function AssistantTab() {
     try {
       const answer = await answerFn();
       setHistory((h) => [...h, { question, answer }]);
+    } catch (err) {
+      setHistory((h) => [...h, { question, answer: `Couldn't get an answer: ${err.message || "something went wrong"}` }]);
     } finally {
       setBusy(false);
     }
