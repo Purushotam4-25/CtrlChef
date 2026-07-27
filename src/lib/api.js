@@ -22,5 +22,6 @@ export const getStockForecast = callable("getStockForecast");
 export const getSalesAnalytics = callable("getSalesAnalytics");
 export const getTableTurnoverStats = callable("getTableTurnoverStats");
 export const estimateQueueWait = callable("estimateQueueWait");
+export const getTableOrderStatus = callable("getTableOrderStatus");
 export const upsertDish = callable("upsertDish");
 export const createStaffMember = callable("createStaffMember");
