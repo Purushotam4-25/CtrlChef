@@ -5,6 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require("@firebase/rules-unit-testing");
+const { serverTimestamp } = require("firebase/firestore");
 
 const PROJECT_ID = "ctrlchef-rules-test";
 const RESTAURANT_ID = "demo-restaurant-1";
@@ -99,7 +100,23 @@ test("nobody can write an order directly, not even a manager", async () => {
 test("anyone can create a queue check-in with no login", async () => {
   const db = testEnv.unauthenticatedContext().firestore();
   await assertSucceeds(
-    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({ name: "Guest", partySize: 2, status: "waiting" })
+    db
+      .collection("restaurants")
+      .doc(RESTAURANT_ID)
+      .collection("queue")
+      .add({ name: "Guest", partySize: 2, status: "waiting", checkedInAt: serverTimestamp() })
+  );
+});
+
+test("a queue check-in can't backdate checkedInAt to jump the line", async () => {
+  const db = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({
+      name: "Guest",
+      partySize: 2,
+      status: "waiting",
+      checkedInAt: new Date("2020-01-01"),
+    })
   );
 });
 
