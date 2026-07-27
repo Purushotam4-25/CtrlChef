@@ -1,78 +1,46 @@
 import { useState } from "react";
-import { getSalesAnalytics, getStockForecast } from "../../lib/api";
-import { fmtHour, fmtINR } from "../../lib/format";
+import { askAssistant } from "../../lib/api";
 import { useOpsTheme } from "../../contexts/ThemeContext";
-import { useOpsData } from "../../contexts/OpsDataContext";
-import { Panel } from "../../components/ops/primitives";
+import { Panel, Badge } from "../../components/ops/primitives";
 
-// No Gemini function exists yet (see functions/) — this is the spec's own
-// "last resort" tier of its 3-layer fallback plan: real Firestore data,
-// turned into plain English with plain templates, no LLM call at all.
-// Swap these for a Cloud Function call once the Gemini/Groq layer lands.
+const SOURCE_BADGE = {
+  gemini: { kind: "green", label: "Gemini" },
+  groq: { kind: "amber", label: "Groq" },
+  template: { kind: "gray", label: "Offline" },
+};
+
+const QUESTIONS = [
+  { text: "What's low on stock?", intent: "low_stock" },
+  { text: "What's tonight's busiest hour?", intent: "busiest_hour" },
+  { text: "What should I 86 if an ingredient runs out?", intent: "what_to_86" },
+];
+
+// Gemini -> Groq -> template fallback lives server-side (functions/assistant.js,
+// see plans/07-ai-assistant.md) — this tab just calls askAssistant and shows
+// which tier actually answered.
 export default function AssistantTab() {
   const { T } = useOpsTheme();
-  const { dishes } = useOpsData();
   const [history, setHistory] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  async function ask(question, answerFn) {
+  async function ask(question, intent) {
     setBusy(true);
     try {
-      const answer = await answerFn();
-      setHistory((h) => [...h, { question, answer }]);
+      const { text, source } = await askAssistant({ intent, params: { days: intent === "busiest_hour" ? 1 : 7 } });
+      setHistory((h) => [...h, { question, answer: text, source }]);
     } finally {
       setBusy(false);
     }
   }
 
-  const questions = [
-    {
-      text: "What's low on stock?",
-      onAsk: () =>
-        ask("What's low on stock?", async () => {
-          const { forecast } = await getStockForecast({ days: 7 });
-          const low = forecast.filter((f) => f.lowStock);
-          if (!low.length) return "Nothing low right now — all ingredients are well stocked.";
-          return low.map((i) => `${i.name} (${i.currentStock} left, threshold ${i.lowStockThreshold})`).join(", ") + ".";
-        }),
-    },
-    {
-      text: "What's tonight's busiest hour?",
-      onAsk: () =>
-        ask("What's tonight's busiest hour?", async () => {
-          const sales = await getSalesAnalytics({ days: 1 });
-          const max = sales.byHour.reduce((a, b) => (b.revenue > a.revenue ? b : a));
-          if (max.revenue === 0) return "No sales yet tonight to call a busiest hour.";
-          return `${fmtHour(max.hour)} is tracking as tonight's busiest hour, around ${fmtINR(max.revenue)} in sales.`;
-        }),
-    },
-    {
-      text: "What should I 86 if an ingredient runs out?",
-      onAsk: () =>
-        ask("What should I 86 if an ingredient runs out?", async () => {
-          const { forecast } = await getStockForecast({ days: 7 });
-          const critical = forecast
-            .filter((f) => f.predictedStockoutInDays !== null && f.predictedStockoutInDays < 3)
-            .sort((a, b) => a.predictedStockoutInDays - b.predictedStockoutInDays);
-          if (!critical.length) return "Nothing is close enough to running out to 86 anything yet.";
-          const soonest = critical[0];
-          const affected = dishes.filter((d) => d.ingredientIds?.includes(soonest.ingredientId)).map((d) => d.name);
-          const runsOutIn = soonest.predictedStockoutInDays.toFixed(1);
-          return affected.length
-            ? `${soonest.name} runs out soonest (~${runsOutIn}d) — consider 86ing ${affected.join(", ")}.`
-            : `${soonest.name} runs out soonest (~${runsOutIn}d).`;
-        }),
-    },
-  ];
-
   return (
     <Panel className="max-w-[640px] p-4">
       <div className="mb-3.5 flex flex-col gap-2">
-        {questions.map((q) => (
+        {QUESTIONS.map((q) => (
           <button
             key={q.text}
             disabled={busy}
-            onClick={q.onAsk}
+            onClick={() => ask(q.text, q.intent)}
             className="rounded-md border px-3 py-2.5 text-left text-[13.5px] transition-colors hover:brightness-125 disabled:opacity-60 disabled:hover:brightness-100"
             style={{ background: T.panel2, borderColor: T.borderAlt, color: T.text }}
           >
@@ -81,28 +49,28 @@ export default function AssistantTab() {
         ))}
       </div>
       <div className="flex flex-col gap-2.5">
-        {history.map((c, i) => (
-          <div key={i}>
-            <div
-              className="ml-[20%] inline-block max-w-[80%] rounded-[8px_8px_2px_8px] px-3 py-2 text-[13.5px] text-white"
-              style={{ background: T.accent }}
-            >
-              {c.question}
+        {history.map((c, i) => {
+          const badge = SOURCE_BADGE[c.source] || SOURCE_BADGE.template;
+          return (
+            <div key={i}>
+              <div
+                className="ml-[20%] inline-block max-w-[80%] rounded-[8px_8px_2px_8px] px-3 py-2 text-[13.5px] text-white"
+                style={{ background: T.accent }}
+              >
+                {c.question}
+              </div>
+              <div className="mt-1.5 flex items-start gap-2">
+                <div
+                  className="inline-block max-w-[80%] rounded-[8px_8px_8px_2px] px-3 py-2 text-[13.5px]"
+                  style={{ background: T.panel2, color: T.bright }}
+                >
+                  {c.answer}
+                </div>
+                <Badge kind={badge.kind}>{badge.label}</Badge>
+              </div>
             </div>
-            <div
-              className="mt-1.5 inline-block max-w-[80%] rounded-[8px_8px_8px_2px] px-3 py-2 text-[13.5px]"
-              style={{ background: T.panel2, color: T.bright }}
-            >
-              {c.answer}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div
-        className="mt-3.5 rounded-md border px-3 py-2.5 text-[13px]"
-        style={{ background: T.inputBg, borderColor: T.panel2, color: T.faintest }}
-      >
-        Free-form questions — coming once Gemini's wired up
+          );
+        })}
       </div>
     </Panel>
   );

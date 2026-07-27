@@ -24,3 +24,4 @@ export const getTableTurnoverStats = callable("getTableTurnoverStats");
 export const estimateQueueWait = callable("estimateQueueWait");
 export const upsertDish = callable("upsertDish");
 export const createStaffMember = callable("createStaffMember");
+export const askAssistant = callable("askAssistant");
