@@ -31,5 +31,6 @@ exports.restockIngredient = inventory.restockIngredient;
 exports.upsertIngredient = inventory.upsertIngredient;
 exports.deleteIngredient = inventory.deleteIngredient;
 exports.estimateQueueWait = queue.estimateQueueWait;
+exports.getTableOrderStatus = queue.getTableOrderStatus;
 exports.upsertDish = menu.upsertDish;
 exports.createStaffMember = staff.createStaffMember;

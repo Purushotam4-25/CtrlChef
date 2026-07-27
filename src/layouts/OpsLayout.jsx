@@ -3,6 +3,8 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useOpsData } from "../contexts/OpsDataContext";
 import { useOpsTheme } from "../contexts/ThemeContext";
+import { useToast } from "../contexts/ToastContext";
+import { useTransitionWatch } from "../lib/useTransitionWatch";
 
 const NAV_ITEMS = [
   { to: "/waiter", label: "Waiter — Table Map", roles: ["waiter", "manager"] },
@@ -12,14 +14,34 @@ const NAV_ITEMS = [
 
 export default function OpsLayout() {
   const { staff, signOut } = useAuth();
-  const { restaurant } = useOpsData();
+  const { restaurant, ingredients } = useOpsData();
   const { mode, setTheme, T } = useOpsTheme();
+  const { notify } = useToast();
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(staff?.role));
   const name = restaurant?.name || "CtrlChef";
 
   useEffect(() => {
     document.title = name;
   }, [name]);
+
+  // Lives here rather than Dashboard.jsx (manager-only) because the trigger
+  // table wants manager AND chef to see it — this layout is the one place
+  // both roles' routes pass through. The ingredients listener itself already
+  // lives in OpsDataContext, shared by every ops role.
+  useTransitionWatch(
+    ingredients,
+    (i) => i.id,
+    (i) => i.lowStock,
+    (ingredient, prev, next) => {
+      if (!next || prev) return; // only the false -> true edge, not restocks
+      if (staff?.role !== "manager" && staff?.role !== "chef") return;
+      notify({
+        kind: "warn",
+        title: `${ingredient.name} is low`,
+        body: `${ingredient.currentStock}${ingredient.unit || ""} left (threshold ${ingredient.lowStockThreshold}${ingredient.unit || ""})`,
+      });
+    }
+  );
 
   return (
     <div

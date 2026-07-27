@@ -3,6 +3,8 @@ import { addOrderItem, advanceOrderItemStatus, cancelOrderItem, markTableClean, 
 import { fmtElapsed, fmtINR } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
 import { useOpsData } from "../../contexts/OpsDataContext";
+import { useToast } from "../../contexts/ToastContext";
+import { useTransitionWatch } from "../../lib/useTransitionWatch";
 import { Button, Modal, Panel, StatTile } from "../../components/ops/primitives";
 import { STATUS_COLORS } from "../../opsTheme";
 import { SkeletonGrid } from "../../components/Skeleton";
@@ -12,6 +14,7 @@ import BillModal from "./BillModal";
 export default function TableMap() {
   const { T } = useOpsTheme();
   const { tables, openOrders: orders, dishes, loading } = useOpsData();
+  const { notify } = useToast();
   const [orderModalTableId, setOrderModalTableId] = useState(null);
   const [billTarget, setBillTarget] = useState(null); // order being configured/closed
   const [bill, setBill] = useState(null); // final result to display, once closed
@@ -30,6 +33,34 @@ export default function TableMap() {
     orders.forEach((o) => (map[o.tableId] = o));
     return map;
   }, [orders]);
+
+  // Flattened so useTransitionWatch has one itemId-keyed list to diff,
+  // instead of a nested orders -> items structure.
+  const flatItems = useMemo(
+    () =>
+      orders.flatMap((o) =>
+        o.items.map((i) => ({ ...i, orderId: o.id, tableId: o.tableId }))
+      ),
+    [orders]
+  );
+  const tableNumberById = useMemo(() => {
+    const map = {};
+    tables.forEach((t) => (map[t.id] = t.number));
+    return map;
+  }, [tables]);
+
+  useTransitionWatch(
+    flatItems,
+    (i) => i.itemId,
+    (i) => i.itemStatus,
+    (item, prev, next) => {
+      if (next !== "ready") return;
+      notify({
+        kind: "success",
+        title: `Table ${tableNumberById[item.tableId] ?? "?"} — ${item.dishName} is ready`,
+      });
+    }
+  );
 
   const occupiedCount = tables.filter((t) => t.status === "occupied").length;
   const emptyCount = tables.filter((t) => t.status === "empty").length;

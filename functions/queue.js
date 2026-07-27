@@ -51,3 +51,40 @@ exports.estimateQueueWait = onCall(async (request) => {
 
   return { available: false, estimatedWaitMinutes };
 });
+
+// Public — reachable by a QR code at the table, no login. `orders` is
+// staff-read-only in firestore.rules (payment info, every other table's
+// bill), so this is the only way a guest ever sees their order: item names,
+// statuses, and the running total, nothing else. Same shape as
+// estimateQueueWait above — a narrow read, not a raw document.
+exports.getTableOrderStatus = onCall(async (request) => {
+  const { restaurantId, tableId } = request.data;
+  if (!restaurantId || !tableId) {
+    throw new HttpsError("invalid-argument", "restaurantId and tableId are required");
+  }
+
+  const restaurantRef = db.collection("restaurants").doc(restaurantId);
+  const tableSnap = await restaurantRef.collection("tables").doc(tableId).get();
+  if (!tableSnap.exists) {
+    throw new HttpsError("not-found", `Table ${tableId} not found`);
+  }
+
+  const orderSnap = await restaurantRef
+    .collection("orders")
+    .where("tableId", "==", tableId)
+    .where("status", "==", "open")
+    .limit(1)
+    .get();
+
+  if (orderSnap.empty) {
+    return { tableNumber: tableSnap.data().number, hasOpenOrder: false };
+  }
+
+  const order = orderSnap.docs[0].data();
+  return {
+    tableNumber: tableSnap.data().number,
+    hasOpenOrder: true,
+    items: order.items.map((i) => ({ dishName: i.dishName, qty: i.qty, itemStatus: i.itemStatus })),
+    totalAmount: order.totalAmount,
+  };
+});
