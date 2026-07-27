@@ -4,6 +4,16 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Fixed the functions deploy failing on npm ci
+
+First deploy attempt failed all 16 functions with `npm ci` complaining about
+missing `@emnapi/core`/`@emnapi/runtime` in the lockfile — some transitive
+optional dep of `unrs-resolver` had drifted out of sync. Regenerated
+`functions/package-lock.json` from scratch, `npm ci` now reproducible
+locally. No actual dependency changed, just the lockfile.
+
+---
+
 ## 2026-07-27 — Deploy prep + bug fixes
 
 Node 22 for functions (24 isn't supported for deploy), readme updated for
