@@ -4,6 +4,22 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Merged plans 05/12/09, seed.js was broken against the emulator
+
+Merged the queue-lifecycle, food-cost, and members branches into `frontend`
+(three-way conflicts in `WORKLOG.md`/`HANDOFF.md` throughout, plus a real one
+in `functions/analytics.js` — plan 12's cost logic needed folding into the
+`lib/analytics.js` version plan 07 had already extracted, not the standalone
+copy it was written against). All 9 backend suites plus the split-bill
+self-check pass after merging (70 cases total).
+
+Along the way, `npm run seed` turned out to be completely broken against the
+local emulator: the `preferRest: true` fix from earlier today disables the
+Admin SDK's `FIRESTORE_EMULATOR_HOST` auto-detection, so every emulator
+write tried to authenticate against real Google credentials and failed.
+Gated it to `SEED_PROD` only — the gRPC hang it was fixing is a
+real-network problem, not a localhost one.
+
 ## 2026-07-27 — Members: optional customer login, order history, "usuals"
 
 `members/{uid}` had rules but nothing in the app ever touched it. `AuthContext`
