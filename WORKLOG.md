@@ -4,6 +4,25 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Google sign-in, email verification, password reset
+
+Implements PS User Story 2's remaining auth surface. `AuthContext` gained
+`signInWithGoogle`, `signUp` (creates the account and immediately sends a
+verification email), `resendVerification`, `resetPassword`, and an
+`emailVerified` flag. `Login.jsx` now has a "Continue with Google" button, a
+"Forgot password?" flow, and — instead of silently bouncing a signed-in user
+back to the login form — an explicit "not registered as staff" screen when
+there's no matching `staff` doc (covers both Google sign-in and any future
+self-signup). New `/signup` page collects email/password and shows a
+verification-pending screen with a resend button. Staff accounts (manager-
+provisioned) are not gated on `emailVerified` — nothing currently gates on it,
+since the `members` surface (plan 09) isn't built yet; that's the natural
+place to require it. Still needed before this counts as done: enable the
+Google provider in the Firebase console, add the deployed domain to
+Authorized domains, and a manual click-through once deployed. Build clean.
+
+---
+
 ## 2026-07-27 — Merge billing and manager-CRUD branches
 
 Merged `worktree-billing-split-system` and `worktree-menu-crud-tags-branding`

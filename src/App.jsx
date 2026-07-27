@@ -9,6 +9,7 @@ import Home from "./pages/guest/Home";
 import Menu from "./pages/guest/Menu";
 import Queue from "./pages/guest/Queue";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import StaffRedirect from "./pages/StaffRedirect";
 import TableMap from "./pages/waiter/TableMap";
 import Tickets from "./pages/chef/Tickets";
@@ -32,6 +33,7 @@ export default function App() {
       </Route>
 
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/staff" element={<StaffRedirect />} />
 
       <Route

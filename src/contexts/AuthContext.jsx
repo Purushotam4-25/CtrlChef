@@ -1,5 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as fbSignOut } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signOut as fbSignOut,
+} from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db, RESTAURANT_ID } from "../firebase";
 
@@ -30,7 +39,16 @@ export function AuthProvider({ children }) {
     staff,
     role: staff?.role || null,
     loading: user === undefined || !staffResolved,
+    emailVerified: !!user?.emailVerified,
     signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+    signInWithGoogle: () => signInWithPopup(auth, new GoogleAuthProvider()),
+    signUp: async (email, password) => {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(cred.user);
+      return cred.user;
+    },
+    resendVerification: () => sendEmailVerification(auth.currentUser),
+    resetPassword: (email) => sendPasswordResetEmail(auth, email),
     signOut: () => fbSignOut(auth),
   };
 

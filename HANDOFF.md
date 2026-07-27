@@ -10,7 +10,8 @@ CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
 forecasting, analytics, billing (with discounts and bill splitting), the full
 manager dashboard (menu/inventory/tables/staff CRUD, dietary tags, site
-branding), and the public menu are working locally.
+branding), Google sign-in, email verification, signup, and password reset,
+and the public menu are working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -24,10 +25,13 @@ yet. The app is not deployed yet.
 
 1. Change Functions from Node 24 to Node 22, then deploy and verify the live
    app.
-2. Add Google sign-in, email verification, signup, and password reset.
+2. Enable the Google sign-in provider in the Firebase console and add the
+   deployed hosting domain to Authorized domains — the code is done (see
+   below) but sign-in fails without this.
 3. Build the manager-only LLM assistant with Gemini → Groq → template fallback.
-4. Manually click through the new manager CRUD screens and billing/split-bill
-   UI in a browser — both merged in without a manual pass.
+4. Manually click through the new manager CRUD screens, billing/split-bill UI,
+   and the new auth screens (Google sign-in, signup, password reset) in a
+   browser — none have had a manual pass yet.
 
 Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
@@ -49,9 +53,27 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
   self-check.
 - Existing staff demo accounts are created by `functions/seed.js`.
 - Google sign-in does not grant a staff role on its own. A matching `staff`
-  document is still required.
+  document is still required — signing in (Google or email) with no matching
+  `staff` doc now shows an explicit "not registered as staff" screen instead
+  of silently bouncing back to `/login`.
+- Email verification is the PS's accepted "OTP or equivalent." Nothing
+  currently gates on `emailVerified` (staff are manager-provisioned; there's
+  no `members` surface yet to gate) — it's exposed on `AuthContext` for
+  when plan 09 (members) lands.
+- The Auth emulator doesn't send real email; verification and password-reset
+  links are logged to the emulator's console output.
 
 ## Session Log
+
+### 2026-07-27 — Google sign-in, email verification, password reset
+
+Built out the rest of `plans/02-auth-oauth-otp.md`: `signInWithGoogle`,
+`signUp` + `sendEmailVerification`, `resendVerification`, `resetPassword`,
+and `emailVerified` on `AuthContext`; a Google button and forgot-password flow
+on `Login.jsx`; an explicit "not registered as staff" screen instead of a
+silent redirect loop; and a new `/signup` page with a verification-pending
+screen. Still open: enable the Google provider + authorized domain in the
+Firebase console, and a manual click-through. See `WORKLOG.md`.
 
 ### 2026-07-27 — Merge billing and manager-CRUD branches
 
