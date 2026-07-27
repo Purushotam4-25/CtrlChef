@@ -4,6 +4,28 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Food cost % / COGS (plan 12)
+
+Ingredients now carry an optional `costPerUnit` — added to the same
+`upsertIngredient` callable and Inventory add/edit form plan 08 shipped,
+not a second one. `getSalesAnalytics` reads the `ingredients` collection
+once (same pattern as `restockIngredient`) and folds cost into the
+existing per-item loop, computed from each order item's `ingredientsUsed`
+snapshot, never the live dish recipe — same reasoning as the
+`cancelOrderItem` stock-restore fix from plan 03. Ingredients missing a
+`costPerUnit` resolve to 0 cost but get flagged, both per-dish
+(`missingCost`) and restaurant-wide (`missingCostIngredientIds`), so the
+UI can say "cost data incomplete" instead of quietly showing a
+too-good food-cost %. Uses today's `costPerUnit` for every order in the
+window since cost isn't versioned — fine for a demo, noted in the code.
+
+AnalyticsTab has a new "Food Cost % by Dish" panel (worst first) and a
+blended food-cost % stat tile. Picked seed ingredient costs (paneer 320/kg,
+chicken 220/kg, basmati 120/kg, base gravy 80/L, and so on) that land the
+blended food cost around 29% against the seeded menu prices, weighted by
+how the demo order history actually sells — right in the 28-35% range.
+Added a cost/missing-cost test case to `test:analytics`; all 8 cases pass.
+
 ## 2026-07-27 — Closed the queue lifecycle gaps
 
 Plan 05's five open items. Seating from the queue was two unguarded round

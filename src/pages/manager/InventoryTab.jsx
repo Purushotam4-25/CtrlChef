@@ -3,7 +3,7 @@ import { deleteIngredient, restockIngredient, upsertIngredient } from "../../lib
 import { useOpsTheme } from "../../contexts/ThemeContext";
 import { Badge, Button, Modal, Panel } from "../../components/ops/primitives";
 
-const emptyForm = { name: "", unit: "", lowStockThreshold: "", currentStock: "" };
+const emptyForm = { name: "", unit: "", lowStockThreshold: "", currentStock: "", costPerUnit: "" };
 
 // ponytail: daily-use / days-left figures live on the Forecast tab (backed by
 // getStockForecast, which derives them from real order history) rather than
@@ -64,7 +64,13 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
   }
 
   function openEdit(i) {
-    setForm({ name: i.name, unit: i.unit, lowStockThreshold: String(i.lowStockThreshold), currentStock: "" });
+    setForm({
+      name: i.name,
+      unit: i.unit,
+      lowStockThreshold: String(i.lowStockThreshold),
+      currentStock: "",
+      costPerUnit: i.costPerUnit !== undefined ? String(i.costPerUnit) : "",
+    });
     setError("");
     setEditing(i);
   }
@@ -85,6 +91,14 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
         return;
       }
     }
+    let costPerUnit;
+    if (form.costPerUnit.trim() !== "") {
+      costPerUnit = Number(form.costPerUnit);
+      if (!Number.isFinite(costPerUnit) || costPerUnit < 0) {
+        setError("Cost per unit must be a non-negative number.");
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       await upsertIngredient({
@@ -93,6 +107,7 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
         unit: form.unit.trim(),
         lowStockThreshold,
         ...(currentStock !== undefined ? { currentStock } : {}),
+        ...(costPerUnit !== undefined ? { costPerUnit } : {}),
       });
       setEditing(null);
     } catch (e) {
@@ -214,6 +229,14 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
           <input
             value={form.lowStockThreshold}
             onChange={(e) => setForm((f) => ({ ...f, lowStockThreshold: e.target.value }))}
+            className="mb-3 w-full rounded-md border px-3 py-2.5 text-sm outline-none"
+            style={{ background: T.inputBg, borderColor: T.borderAlt, color: T.text }}
+          />
+          <label className="mb-1.5 block text-[13px] font-semibold">Cost per unit (₹)</label>
+          <input
+            value={form.costPerUnit}
+            onChange={(e) => setForm((f) => ({ ...f, costPerUnit: e.target.value }))}
+            placeholder="optional — feeds the food-cost report"
             className="mb-3 w-full rounded-md border px-3 py-2.5 text-sm outline-none"
             style={{ background: T.inputBg, borderColor: T.borderAlt, color: T.text }}
           />

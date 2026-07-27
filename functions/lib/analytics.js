@@ -11,14 +11,16 @@ function cutoffTimestamp(days) {
 async function computeSalesAnalytics(restaurantId, days) {
   const db = getFirestore();
 
-  // ponytail: fetches the full dishes/staff collections every call — fine at
-  // demo scale (a dozen dishes, a handful of staff). Paginate or precompute
-  // a rollup if either collection grows large.
+  // ponytail: fetches the full dishes/staff/ingredients collections every
+  // call — fine at demo scale (a dozen dishes, a handful of staff/
+  // ingredients). Paginate or precompute a rollup if any collection grows
+  // large.
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
-  const [ordersSnap, dishesSnap, staffSnap] = await Promise.all([
+  const [ordersSnap, dishesSnap, staffSnap, ingredientsSnap] = await Promise.all([
     restaurantRef.collection("orders").where("createdAt", ">=", cutoffTimestamp(days)).get(),
     restaurantRef.collection("dishes").get(),
     restaurantRef.collection("staff").get(),
+    restaurantRef.collection("ingredients").get(),
   ]);
 
   const staffNameById = {};
@@ -26,10 +28,15 @@ async function computeSalesAnalytics(restaurantId, days) {
     staffNameById[doc.id] = doc.data().name;
   });
 
+  const ingredientsById = {};
+  ingredientsSnap.forEach((doc) => {
+    ingredientsById[doc.id] = { id: doc.id, ...doc.data() };
+  });
+
   // Seed every current dish at zero so slow-movers (nobody ordering it) show up too.
   const byDish = {};
   dishesSnap.forEach((doc) => {
-    byDish[doc.id] = { dishId: doc.id, name: doc.data().name, qty: 0, revenue: 0 };
+    byDish[doc.id] = { dishId: doc.id, name: doc.data().name, qty: 0, revenue: 0, cost: 0, missingCost: false };
   });
 
   const byHour = Array.from({ length: 24 }, (_, hour) => ({ hour, qty: 0, revenue: 0 }));
@@ -38,6 +45,9 @@ async function computeSalesAnalytics(restaurantId, days) {
   const byPaymentMethod = Object.fromEntries(
     VALID_PAYMENT_METHODS.map((method) => [method, { method, orderCount: 0, revenue: 0 }])
   );
+  let totalRevenue = 0;
+  let totalCost = 0;
+  const missingCostIngredientIds = new Set();
 
   ordersSnap.forEach((doc) => {
     const order = doc.data();
@@ -63,13 +73,37 @@ async function computeSalesAnalytics(restaurantId, days) {
     for (const item of order.items) {
       const lineRevenue = item.price * item.qty;
 
+      // Cost from the recipe snapshotted at order time (item.ingredientsUsed),
+      // never the live dish.ingredients — a dish's recipe can be edited or
+      // the dish deleted after the order, same reasoning as the
+      // cancelOrderItem stock-restore fix (plan 03). Missing costPerUnit
+      // resolves to 0 here but gets flagged via missingCostIngredientIds
+      // rather than silently reported as a too-good food-cost %.
+      // Also: this always uses TODAY's costPerUnit, not the cost at order
+      // time — costs aren't versioned in the schema, accepted for a
+      // hackathon demo.
+      let lineHasMissingCost = false;
+      const lineCost =
+        (item.ingredientsUsed || []).reduce((sum, { ingredientId, qtyRequired }) => {
+          const ingredient = ingredientsById[ingredientId];
+          if (!ingredient || ingredient.costPerUnit === undefined || ingredient.costPerUnit === null) {
+            missingCostIngredientIds.add(ingredientId);
+            lineHasMissingCost = true;
+          }
+          return sum + qtyRequired * (ingredient?.costPerUnit ?? 0);
+        }, 0) * item.qty;
+
       // Dish may have since been deleted (managers can) — fall back to the
       // item's own snapshotted name rather than dropping its sales.
       if (!byDish[item.dishId]) {
-        byDish[item.dishId] = { dishId: item.dishId, name: item.dishName, qty: 0, revenue: 0 };
+        byDish[item.dishId] = { dishId: item.dishId, name: item.dishName, qty: 0, revenue: 0, cost: 0, missingCost: false };
       }
       byDish[item.dishId].qty += item.qty;
       byDish[item.dishId].revenue += lineRevenue;
+      byDish[item.dishId].cost += lineCost;
+      if (lineHasMissingCost) byDish[item.dishId].missingCost = true;
+      totalRevenue += lineRevenue;
+      totalCost += lineCost;
 
       const addedAt = item.addedAt.toDate();
       byHour[addedAt.getHours()].qty += item.qty;
@@ -99,6 +133,9 @@ async function computeSalesAnalytics(restaurantId, days) {
     byDayOfWeek,
     byStaff: byStaffList,
     byPaymentMethod: Object.values(byPaymentMethod),
+    totalRevenue,
+    totalCost,
+    missingCostIngredientIds: [...missingCostIngredientIds],
   };
 }
 

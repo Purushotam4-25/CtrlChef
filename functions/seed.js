@@ -38,17 +38,22 @@ const ingredients = [
   // summary npm run seed prints. The rest are kept comfortable but still
   // modest, so ordering a bunch of one dish live during the demo can still
   // visibly grey out every other dish sharing that ingredient.
-  { id: "paneer", name: "Paneer", unit: "kg", currentStock: 33, lowStockThreshold: 2 },
-  { id: "chicken", name: "Chicken", unit: "kg", currentStock: 17, lowStockThreshold: 2 },
-  { id: "basmati_rice", name: "Basmati Rice", unit: "kg", currentStock: 60, lowStockThreshold: 3 },
-  { id: "base_gravy", name: "Base Gravy", unit: "L", currentStock: 11, lowStockThreshold: 1.5 },
-  { id: "lentils", name: "Lentils", unit: "kg", currentStock: 9, lowStockThreshold: 1 },
-  { id: "tomato", name: "Tomato", unit: "kg", currentStock: 16, lowStockThreshold: 1 },
-  { id: "onion", name: "Onion", unit: "kg", currentStock: 28, lowStockThreshold: 1 },
-  { id: "garam_masala", name: "Garam Masala", unit: "kg", currentStock: 1, lowStockThreshold: 0.2 },
-  { id: "flour", name: "Flour", unit: "kg", currentStock: 17, lowStockThreshold: 2 },
-  { id: "sugar", name: "Sugar", unit: "kg", currentStock: 5, lowStockThreshold: 1 },
-  { id: "milk", name: "Milk", unit: "L", currentStock: 8, lowStockThreshold: 2 },
+  // costPerUnit is INR per the ingredient's unit (kg/L), rough wholesale
+  // prices — landed against the seeded menu prices below, weighted by
+  // DISH_WEIGHT, this comes out to a ~29% blended food cost, right in the
+  // 28-35% rule-of-thumb range (npm run seed doesn't print this — checked
+  // by hand when these numbers were picked).
+  { id: "paneer", name: "Paneer", unit: "kg", currentStock: 33, lowStockThreshold: 2, costPerUnit: 320 },
+  { id: "chicken", name: "Chicken", unit: "kg", currentStock: 17, lowStockThreshold: 2, costPerUnit: 220 },
+  { id: "basmati_rice", name: "Basmati Rice", unit: "kg", currentStock: 60, lowStockThreshold: 3, costPerUnit: 120 },
+  { id: "base_gravy", name: "Base Gravy", unit: "L", currentStock: 11, lowStockThreshold: 1.5, costPerUnit: 80 },
+  { id: "lentils", name: "Lentils", unit: "kg", currentStock: 9, lowStockThreshold: 1, costPerUnit: 110 },
+  { id: "tomato", name: "Tomato", unit: "kg", currentStock: 16, lowStockThreshold: 1, costPerUnit: 40 },
+  { id: "onion", name: "Onion", unit: "kg", currentStock: 28, lowStockThreshold: 1, costPerUnit: 35 },
+  { id: "garam_masala", name: "Garam Masala", unit: "kg", currentStock: 1, lowStockThreshold: 0.2, costPerUnit: 600 },
+  { id: "flour", name: "Flour", unit: "kg", currentStock: 17, lowStockThreshold: 2, costPerUnit: 45 },
+  { id: "sugar", name: "Sugar", unit: "kg", currentStock: 5, lowStockThreshold: 1, costPerUnit: 45 },
+  { id: "milk", name: "Milk", unit: "L", currentStock: 8, lowStockThreshold: 2, costPerUnit: 55 },
 ];
 
 const dishes = [
@@ -395,6 +400,7 @@ async function seed() {
       unit: ing.unit,
       currentStock: ing.currentStock,
       lowStockThreshold: ing.lowStockThreshold,
+      costPerUnit: ing.costPerUnit,
       lowStock: computeLowStock(ing),
       lastRestockedAt: admin.firestore.FieldValue.serverTimestamp(),
     });

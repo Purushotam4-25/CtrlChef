@@ -72,6 +72,11 @@ async function setup() {
 
   await restaurantRef.collection("tables").doc("t1").set({ number: 1, capacity: 4, partySize: 4, status: "empty" });
 
+  // flour_x has a cost, salt_x deliberately doesn't — exercises the
+  // missing-costPerUnit fallback and the missingCostIngredientIds flag.
+  await restaurantRef.collection("ingredients").doc("flour_x").set({ name: "Flour X", unit: "kg", currentStock: 10, lowStockThreshold: 1, costPerUnit: 10 });
+  await restaurantRef.collection("ingredients").doc("salt_x").set({ name: "Salt X", unit: "kg", currentStock: 10, lowStockThreshold: 1 });
+
   const now = Date.now();
   const order1CreatedAt = new Date(now - 2 * 24 * 60 * 60 * 1000);
   const order1ClosedAt = new Date(order1CreatedAt.getTime() + 30 * 60 * 1000); // 30 min
@@ -85,7 +90,10 @@ async function setup() {
     createdAt: order1CreatedAt,
     closedAt: order1ClosedAt,
     totalAmount: 300,
-    items: [{ itemId: "i1", dishId: "dish_a", dishName: "Dish A", qty: 3, price: 100, itemStatus: "served", addedAt: order1CreatedAt }],
+    items: [{
+      itemId: "i1", dishId: "dish_a", dishName: "Dish A", qty: 3, price: 100, itemStatus: "served", addedAt: order1CreatedAt,
+      ingredientsUsed: [{ ingredientId: "flour_x", qtyRequired: 2 }], // 2 * 10/unit * qty 3 = 60 cost
+    }],
   });
 
   await restaurantRef.collection("orders").doc("order2").set({
@@ -95,7 +103,10 @@ async function setup() {
     createdAt: order2CreatedAt,
     closedAt: order2ClosedAt,
     totalAmount: 200,
-    items: [{ itemId: "i2", dishId: "dish_a", dishName: "Dish A", qty: 2, price: 100, itemStatus: "served", addedAt: order2CreatedAt }],
+    items: [{
+      itemId: "i2", dishId: "dish_a", dishName: "Dish A", qty: 2, price: 100, itemStatus: "served", addedAt: order2CreatedAt,
+      ingredientsUsed: [{ ingredientId: "salt_x", qtyRequired: 1 }], // no costPerUnit -> 0 cost, flagged as missing
+    }],
   });
 
   // dish_deleted doesn't exist in the dishes collection (simulates a
@@ -148,6 +159,30 @@ test("getSalesAnalytics totals match hand-calculated values", async () => {
   assertEqual(staffEntry.qty, 5, "byStaff qty");
   assertEqual(staffEntry.revenue, 500, "byStaff revenue");
   assertEqual(staffEntry.orderCount, 2, "byStaff orderCount");
+});
+
+test("getSalesAnalytics computes ingredient cost from ingredientsUsed and flags missing costPerUnit", async () => {
+  const res = await call("getSalesAnalytics", { restaurantId: RESTAURANT_ID }, manager.idToken);
+  if (!res.result) throw new Error(`expected a result, got ${JSON.stringify(res)}`);
+
+  const dishA = res.result.byDish.find((d) => d.dishId === "dish_a");
+  // order1: flour_x (costPerUnit 10) * 2 qtyRequired * 3 ordered = 60.
+  // order2: salt_x has no costPerUnit -> resolves to 0, but still flags missing.
+  assertEqual(dishA.cost, 60, "dish_a cost");
+  assertEqual(dishA.missingCost, true, "dish_a missingCost flag");
+
+  if (!res.result.missingCostIngredientIds.includes("salt_x")) {
+    throw new Error(`expected missingCostIngredientIds to include salt_x, got ${JSON.stringify(res.result.missingCostIngredientIds)}`);
+  }
+
+  // order3's item has no ingredientsUsed at all -> 0 cost, not flagged missing.
+  const deletedDish = res.result.byDish.find((d) => d.dishId === "dish_deleted");
+  assertEqual(deletedDish.cost, 0, "dish_deleted cost (no ingredientsUsed snapshot)");
+  assertEqual(deletedDish.missingCost, false, "dish_deleted missingCost flag");
+
+  // Totals: revenue 300+200+400=900, cost only from order1's flour_x line = 60.
+  assertEqual(res.result.totalRevenue, 900, "totalRevenue");
+  assertEqual(res.result.totalCost, 60, "totalCost");
 });
 
 test("getTableTurnoverStats matches hand-calculated average", async () => {
