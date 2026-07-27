@@ -48,7 +48,7 @@ export default function Tickets() {
         table: tableNumberById[order.tableId] ?? "?",
         name: item.dishName,
         qty: item.qty,
-        addedAtMs: item.addedAt.toDate().getTime(),
+        addedAtMs: item.addedAt?.toDate?.().getTime() ?? Date.now(),
       });
     });
   });

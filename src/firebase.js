@@ -6,7 +6,22 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 // The hosting emulator (proxied by vite.config.js in dev, served for real in
 // prod) hands back the project's actual config — no copy of it needs to live
 // in this repo.
-const config = await fetch("/__/firebase/init.json").then((res) => res.json());
+let config;
+try {
+  const res = await fetch("/__/firebase/init.json");
+  if (!res.ok) throw new Error(`init.json ${res.status}`);
+  config = await res.json();
+} catch (err) {
+  // Top-level await with no guard used to throw here and leave a blank white
+  // screen with zero explanation — this is the one place a bad deploy or a
+  // flaky network shouldn't fail silently.
+  document.getElementById("root").innerHTML =
+    '<div style="font:14px system-ui;padding:2rem">' +
+    "Couldn't load Firebase config. If you're running locally, start the " +
+    "hosting emulator first: <code>firebase emulators:start</code>." +
+    "</div>";
+  throw err;
+}
 
 export const app = initializeApp(config);
 export const auth = getAuth(app);
