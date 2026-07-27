@@ -6,11 +6,15 @@ import { Panel } from "../../components/ops/primitives";
 export default function ForecastTab() {
   const { T } = useOpsTheme();
   const [forecast, setForecast] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    getStockForecast({ days: 7 }).then((res) => setForecast(res.forecast));
+    getStockForecast({ days: 7 })
+      .then((res) => setForecast(res.forecast))
+      .catch((err) => setError(err.message || "Couldn't load the forecast."));
   }, []);
 
+  if (error) return <div style={{ color: "#f87171" }}>{error}</div>;
   if (!forecast) return <div style={{ color: T.faint }}>Loading forecast…</div>;
 
   const atRisk = forecast.filter((f) => f.predictedStockoutInDays !== null).sort((a, b) => a.predictedStockoutInDays - b.predictedStockoutInDays);
