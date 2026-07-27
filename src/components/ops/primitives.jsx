@@ -117,7 +117,7 @@ export function Modal({ open, onClose, children, width = 360 }) {
     >
       <div
         className="max-h-[80vh] overflow-y-auto rounded-xl border p-4"
-        style={{ background: T.panel, borderColor: T.borderAlt, width, maxWidth: "90vw" }}
+        style={{ background: T.panel, borderColor: T.borderAlt, color: T.text, width, maxWidth: "90vw" }}
       >
         {children}
       </div>
