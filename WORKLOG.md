@@ -4,6 +4,39 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Notifications and guest order tracking
+
+Built plan 06: in-app toasts plus a guest-facing order tracker. Skipped FCM
+push — it's the plan's explicit bonus item, cut it per the plan's own call.
+
+`ToastContext` is a `useState` array and a `setTimeout` per toast, no
+library. All three triggers share one hook, `useTransitionWatch(items,
+keyFn, fieldFn, onChange)` — diffs a Map of the previous snapshot against
+the new one and only fires on an actual field change, never on the first
+snapshot and never on an unrelated re-fire of the same listener. Item ->
+ready toasts the waiter in `TableMap`, a new ticket toasts the chef in
+`Tickets`, and an ingredient crossing low-stock toasts both manager and
+chef — that watch lives in `OpsLayout` instead of `Dashboard`, since
+`Dashboard` only renders for a manager and chef needed it too (the
+ingredients listener itself was already shared via `OpsDataContext`, it
+just had nothing watching the false->true edge).
+
+Guest order tracking is a new `/table/:tableId` route (meant for a QR code
+at the table), backed by a new public callable `getTableOrderStatus` — same
+shape as `estimateQueueWait`, hands back item names, statuses, and the
+running total, nothing a guest shouldn't see. `orders` stays staff-read-only
+in the rules either way. The page polls the callable every 8s instead of a
+live listener, since a guest has no auth to hold a rules-scoped
+subscription.
+
+No new test suite — `getTableOrderStatus` has none, matching
+`estimateQueueWait`, its closest sibling, which doesn't have one either.
+Verified by hand against the emulator instead: occupied table, empty table,
+unknown table, missing args. 58 existing backend cases still pass, `npm run
+build` clean.
+
+---
+
 ## 2026-07-27 — Login stuck on "Loading…" for a signed-in account with no staff doc
 
 Firestore rules deny reading a staff doc that doesn't exist (the isStaff

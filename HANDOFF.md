@@ -10,8 +10,9 @@ CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
 forecasting, analytics, billing (with discounts and bill splitting), the full
 manager dashboard (menu/inventory/tables/staff CRUD, dietary tags, site
-branding), Google sign-in, email verification, signup, and password reset,
-and the public menu are working locally.
+branding), Google sign-in, email verification, signup, password reset, the
+public menu, in-app toast notifications, and guest order tracking are
+working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -27,11 +28,11 @@ yet. The app is not deployed yet.
    deploy` and the Google provider + authorized domain turned on in the
    Firebase console.
 2. Build the manager-only LLM assistant with Gemini → Groq → template fallback.
-3. Build notifications (toasts on order-ready/new-order/low-stock + guest
-   order tracking).
-4. Manually click through the new manager CRUD screens, billing/split-bill UI,
-   and the new auth screens (Google sign-in, signup, password reset) in a
-   browser — none have had a manual pass yet.
+3. Manually click through the new manager CRUD screens, billing/split-bill UI,
+   the auth screens (Google sign-in, signup, password reset), and now the
+   toasts and `/table/:tableId` tracker too — none have had a manual pass yet.
+4. FCM push on the same three triggers, only if there's slack — the plan
+   calls it a bonus and a permission prompt mid-demo is a real risk.
 
 Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
@@ -64,6 +65,16 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
   links are logged to the emulator's console output.
 
 ## Session Log
+
+### 2026-07-27 — Notifications and guest order tracking
+
+Built out `plans/06-notifications.md`: in-app toasts (`ToastContext` +
+`Toast` in `primitives.jsx`) driven by one shared diffing hook,
+`useTransitionWatch`, wired into the three spec'd triggers — item ready
+(waiter), new ticket (chef), low stock (manager + chef). Also a
+`/table/:tableId` guest route backed by a new public callable,
+`getTableOrderStatus`, mirroring `estimateQueueWait`. Skipped FCM push, the
+plan's own bonus item. See `WORKLOG.md`.
 
 ### 2026-07-27 — Deploy prep + two bug fixes
 
