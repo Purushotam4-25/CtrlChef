@@ -23,6 +23,7 @@ export const getSalesAnalytics = callable("getSalesAnalytics");
 export const getTableTurnoverStats = callable("getTableTurnoverStats");
 export const estimateQueueWait = callable("estimateQueueWait");
 export const seatFromQueue = callable("seatFromQueue");
+export const cancelQueueEntry = callable("cancelQueueEntry");
 export const getTableOrderStatus = callable("getTableOrderStatus");
 export const upsertDish = callable("upsertDish");
 export const createStaffMember = callable("createStaffMember");

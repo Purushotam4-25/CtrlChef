@@ -121,6 +121,31 @@ exports.seatFromQueue = onCall({ minInstances: 1 }, async (request) => {
   });
 });
 
+// Waiter marks a queue entry as a no-show / walked. Was a direct client
+// updateDoc before — moved to a callable so a cancel on an already-seated
+// entry (a stale click, a race with another waiter) gets rejected instead
+// of silently overwriting its "seated" status.
+exports.cancelQueueEntry = onCall(async (request) => {
+  const { restaurantId, entryId } = request.data;
+  if (!restaurantId || !entryId) {
+    throw new HttpsError("invalid-argument", "restaurantId and entryId are required");
+  }
+
+  await requireStaffRole(request, restaurantId, WAITER_OR_MANAGER);
+
+  const entryRef = db.collection("restaurants").doc(restaurantId).collection("queue").doc(entryId);
+  const entrySnap = await entryRef.get();
+  if (!entrySnap.exists) {
+    throw new HttpsError("not-found", `Queue entry ${entryId} not found`);
+  }
+  if (entrySnap.data().status !== "waiting") {
+    throw new HttpsError("failed-precondition", `Queue entry is already "${entrySnap.data().status}"`);
+  }
+
+  await entryRef.update({ status: "cancelled" });
+  return { entryId, status: "cancelled" };
+});
+
 // Public — reachable by a QR code at the table, no login. `orders` is
 // staff-read-only in firestore.rules (payment info, every other table's
 // bill), so this is the only way a guest ever sees their order: item names,

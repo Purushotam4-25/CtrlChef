@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db, RESTAURANT_ID } from "../../firebase";
-import { seatFromQueue } from "../../lib/api";
+import { cancelQueueEntry, seatFromQueue } from "../../lib/api";
 import { fmtElapsed } from "../../lib/format";
 import { useOpsData } from "../../contexts/OpsDataContext";
 import { useOpsTheme } from "../../contexts/ThemeContext";
@@ -37,7 +35,7 @@ export default function QueuePanel({ tables, onError }) {
     if (removingId) return;
     setRemovingId(entry.id);
     try {
-      await updateDoc(doc(db, "restaurants", RESTAURANT_ID, "queue", entry.id), { status: "cancelled" });
+      await cancelQueueEntry({ entryId: entry.id });
     } catch (e) {
       onError(e.message || "Couldn't remove that party.");
     } finally {

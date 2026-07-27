@@ -35,6 +35,7 @@ exports.deleteIngredient = inventory.deleteIngredient;
 exports.estimateQueueWait = queue.estimateQueueWait;
 exports.getTableOrderStatus = queue.getTableOrderStatus;
 exports.seatFromQueue = queue.seatFromQueue;
+exports.cancelQueueEntry = queue.cancelQueueEntry;
 exports.upsertDish = menu.upsertDish;
 exports.createStaffMember = staff.createStaffMember;
 exports.askAssistant = assistant.askAssistant;
