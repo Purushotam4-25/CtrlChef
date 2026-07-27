@@ -4,6 +4,29 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Closed the queue lifecycle gaps
+
+Plan 05's five open items. Seating from the queue was two unguarded round
+trips — `seatTable` then a separate queue-entry update — so a failure
+between them left a table occupied with the party stuck "waiting" forever
+and nothing to catch it. New `seatFromQueue` does both writes in one
+transaction, checks the table actually fits the party first, and writes real
+`partySize` onto the table. That let `getTableTurnoverStats` group by actual
+party size instead of table capacity, which was only ever a stand-in.
+
+Added a no-show button — queue entries could only become "seated" before
+this, so a party that left just sat in the list. `estimateQueueWait` now
+factors in how many parties are already ahead in line instead of handing
+everyone the same flat average. Locked down the public queue-create rule
+with `hasOnly` and a name-length check — it validated partySize and status
+but nothing stopped an anonymous write from carrying arbitrary extra fields.
+Killed the hardcoded `~8 min` on the guest home page, now a real
+`estimateQueueWait` call.
+
+Skipped the optional guest-side live queue position — plan called it
+explicitly optional. 21 rules cases now (was 19), plus the existing
+`test:analytics` fixture updated for the partySize grouping.
+
 ## 2026-07-27 — Wired up the Gemini/Groq assistant
 
 `functions/assistant.js` (`askAssistant`, manager-only) answers the three
