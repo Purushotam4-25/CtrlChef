@@ -4,6 +4,18 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — seed.js couldn't actually seed prod, and hung forever trying
+
+Two real bugs, both in `seed.js`. First: `preferRest: true` added on the
+Firestore client — on some networks (VPN, antivirus doing HTTP/2 inspection)
+the default gRPC transport just hangs with zero error, forever. Second, and
+the bigger one: the "unset FIRESTORE_EMULATOR_HOST to hit prod" guidance
+(mine, from earlier today) was backwards — `||=` fills in the emulator
+default when the var is *unset*, so there was never a way to reach
+production through env vars alone. Replaced it with an explicit
+`SEED_PROD=true` opt-in. Confirmed both fixes work with a one-off write
+against real Firestore before patching the script properly.
+
 ## 2026-07-27 — Login stuck on "Loading…" for a signed-in account with no staff doc
 
 Firestore rules deny reading a staff doc that doesn't exist (the isStaff
