@@ -104,8 +104,17 @@ export function AuthProvider({ children }) {
     // freshly-set displayName until the next auth-state event.
     signUpMember: async (name, email, password) => {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      if (name) await updateProfile(cred.user, { displayName: name });
-      await setDoc(doc(db, "restaurants", RESTAURANT_ID, "members", cred.user.uid), { name: name || email, email });
+      // onAuthStateChanged can fire as soon as the account exists, before
+      // the writes below finish — without this guard the fallback effect
+      // above can race in first and stamp the generic fallback name instead
+      // of the one entered here.
+      provisioning.current.add(cred.user.uid);
+      try {
+        if (name) await updateProfile(cred.user, { displayName: name });
+        await setDoc(doc(db, "restaurants", RESTAURANT_ID, "members", cred.user.uid), { name: name || email, email });
+      } finally {
+        provisioning.current.delete(cred.user.uid);
+      }
       return cred;
     },
     resendVerification: () => sendEmailVerification(auth.currentUser),
