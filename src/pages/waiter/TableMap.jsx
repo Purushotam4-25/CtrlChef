@@ -13,7 +13,7 @@ import BillModal from "./BillModal";
 
 export default function TableMap() {
   const { T } = useOpsTheme();
-  const { tables, openOrders: orders, dishes, loading } = useOpsData();
+  const { tables, openOrders: orders, dishes, members, loading } = useOpsData();
   const { notify } = useToast();
   const [orderModalTableId, setOrderModalTableId] = useState(null);
   const [billTarget, setBillTarget] = useState(null); // order being configured/closed
@@ -21,6 +21,8 @@ export default function TableMap() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(new Set());
   const [tick, setTick] = useState(0);
+  const [memberQuery, setMemberQuery] = useState("");
+  const [selectedMember, setSelectedMember] = useState(null); // {id, name} — attached once, at order creation
   const errorTimeout = useRef(null);
 
   useEffect(() => {
@@ -89,6 +91,15 @@ export default function TableMap() {
   }
 
   const modalTable = tables.find((t) => t.id === orderModalTableId);
+  const modalOrder = orderByTable[orderModalTableId];
+
+  const memberMatches = useMemo(() => {
+    const q = memberQuery.trim().toLowerCase();
+    if (!q) return [];
+    return members
+      .filter((m) => m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [memberQuery, members]);
 
   return (
     <div>
@@ -190,9 +201,15 @@ export default function TableMap() {
                     variant="primary"
                     className="min-h-[40px] flex-1"
                     disabled={t.status === "empty" && pending.has(`seat-${t.id}`)}
-                    onClick={() =>
-                      t.status === "empty" ? run(`seat-${t.id}`, () => seatTable({ tableId: t.id })) : setOrderModalTableId(t.id)
-                    }
+                    onClick={() => {
+                      if (t.status === "empty") {
+                        run(`seat-${t.id}`, () => seatTable({ tableId: t.id }));
+                      } else {
+                        setMemberQuery("");
+                        setSelectedMember(null);
+                        setOrderModalTableId(t.id);
+                      }
+                    }}
                   >
                     + Order
                   </Button>
@@ -233,12 +250,68 @@ export default function TableMap() {
             ×
           </button>
         </div>
+        {/* Only relevant before the order exists — memberId is set once, at
+            order creation, and never revisited on later items. */}
+        {!modalOrder && (
+          <div className="mb-3">
+            <label className="mb-1 block text-[12px] font-semibold" style={{ color: T.dim }}>
+              Attach a member (optional)
+            </label>
+            {selectedMember ? (
+              <div
+                className="flex items-center justify-between rounded-md border px-3 py-2 text-[13px]"
+                style={{ background: T.panel2, borderColor: T.borderAlt, color: T.text }}
+              >
+                <span>{selectedMember.name}</span>
+                <button className="text-[11px] underline" style={{ color: T.faint }} onClick={() => setSelectedMember(null)}>
+                  clear
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  value={memberQuery}
+                  onChange={(e) => setMemberQuery(e.target.value)}
+                  placeholder="Search by name or email…"
+                  className="w-full rounded-md border px-3 py-2 text-[13px] outline-none"
+                  style={{ background: T.inputBg, borderColor: T.borderAlt, color: T.text }}
+                />
+                {memberMatches.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border" style={{ background: T.panel, borderColor: T.borderAlt }}>
+                    {memberMatches.map((m) => (
+                      <button
+                        key={m.id}
+                        className="block w-full px-3 py-2 text-left text-[13px] transition-colors hover:brightness-125"
+                        style={{ color: T.text }}
+                        onClick={() => {
+                          setSelectedMember({ id: m.id, name: m.name });
+                          setMemberQuery("");
+                        }}
+                      >
+                        {m.name} <span style={{ color: T.faint }}>{m.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           {dishes.map((m) => (
             <button
               key={m.id}
               disabled={!m.available || pending.has(`add-${m.id}`)}
-              onClick={() => run(`add-${m.id}`, () => addOrderItem({ tableId: modalTable.id, dishId: m.id, qty: 1 }))}
+              onClick={() =>
+                run(`add-${m.id}`, () =>
+                  addOrderItem({
+                    tableId: modalTable.id,
+                    dishId: m.id,
+                    qty: 1,
+                    ...(selectedMember ? { memberId: selectedMember.id } : {}),
+                  })
+                )
+              }
               className="flex items-center justify-between rounded-md border px-3 py-2.5 text-[13.5px] transition-colors hover:brightness-125 disabled:opacity-40 disabled:hover:brightness-100"
               style={{ background: T.panel2, borderColor: T.borderAlt, color: T.text }}
             >

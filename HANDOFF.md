@@ -11,9 +11,10 @@ ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
 forecasting, analytics (now with food cost % / COGS per dish and blended),
 the Gemini/Groq/template assistant, billing (with discounts and bill
 splitting), the full manager dashboard (menu/inventory/tables/staff CRUD,
-dietary tags, site branding), Google sign-in, email verification, signup,
-password reset, the public menu, in-app toast notifications, and guest
-order tracking are working locally.
+customers, dietary tags, site branding), Google sign-in, email verification,
+signup, password reset, the public menu, in-app toast notifications, guest
+order tracking, and optional customer accounts (members) are working
+locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -52,22 +53,42 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
 - The seed script is deliberately emulator-first. Do not point it at
   production without an explicit production-seeding plan.
-- Current tests: 53 across rules, auth, orders, forecast, analytics,
-  inventory, and menu CRUD, plus 7 billing cases and a 4-case split-math
-  self-check.
+- Current tests: 58 across rules, auth, orders, forecast, analytics,
+  inventory, and menu CRUD, plus 7 billing cases, a 4-case split-math
+  self-check, and 5 member cases.
 - Existing staff demo accounts are created by `functions/seed.js`.
 - Google sign-in does not grant a staff role on its own. A matching `staff`
   document is still required — signing in (Google or email) with no matching
   `staff` doc now shows an explicit "not registered as staff" screen instead
   of silently bouncing back to `/login`.
 - Email verification is the PS's accepted "OTP or equivalent." Nothing
-  currently gates on `emailVerified` (staff are manager-provisioned; there's
-  no `members` surface yet to gate) — it's exposed on `AuthContext` for
-  when plan 09 (members) lands.
+  currently gates on `emailVerified` for staff or member accounts.
 - The Auth emulator doesn't send real email; verification and password-reset
   links are logged to the emulator's console output.
+- Members are separate from staff — self-signup at `/account`, no manager
+  provisioning needed. A signed-in user with neither a `staff` nor a `members`
+  doc gets turned into a member automatically (see `AuthContext.jsx`); there's
+  no dedicated "you have no account" screen because nothing in the current
+  sign-in paths can actually land there.
+- Order-to-member linking is waiter-driven (search-and-attach at the table,
+  in `TableMap.jsx`), the simpler of the two options plan 09 offered. Plan 05
+  (queue lifecycle) has since landed, so the neater guest-self-service path
+  through `seatFromQueue` is possible now — not switched over yet.
 
 ## Session Log
+
+### 2026-07-27 — Members: login, order history, usuals, Customers tab
+
+Built out plan 09. See `WORKLOG.md` for the full breakdown.
+
+### 2026-07-27 — Food cost % / COGS (plan 12)
+
+Added `costPerUnit` to ingredients (same `upsertIngredient` callable/form as
+plan 08, not a new one) and folded cost into `getSalesAnalytics` — computed
+from each order item's `ingredientsUsed` snapshot, never the live recipe.
+Missing costs get flagged instead of silently reading as 0. New "Food Cost %
+by Dish" panel and a blended stat tile on the Analytics tab. See
+`WORKLOG.md`.
 
 ### 2026-07-27 — Closed the queue lifecycle gaps
 
@@ -126,14 +147,6 @@ on `Login.jsx`; an explicit "not registered as staff" screen instead of a
 silent redirect loop; and a new `/signup` page with a verification-pending
 screen. Still open: enable the Google provider + authorized domain in the
 Firebase console, and a manual click-through. See `WORKLOG.md`.
-### 2026-07-27 — Food cost % / COGS (plan 12)
-
-Added `costPerUnit` to ingredients (same `upsertIngredient` callable/form as
-plan 08, not a new one) and folded cost into `getSalesAnalytics` — computed
-from each order item's `ingredientsUsed` snapshot, never the live recipe.
-Missing costs get flagged instead of silently reading as 0. New "Food Cost %
-by Dish" panel and a blended stat tile on the Analytics tab. See
-`WORKLOG.md`.
 
 ### 2026-07-27 — Merge billing and manager-CRUD branches
 

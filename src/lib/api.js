@@ -27,3 +27,5 @@ export const getTableOrderStatus = callable("getTableOrderStatus");
 export const upsertDish = callable("upsertDish");
 export const createStaffMember = callable("createStaffMember");
 export const askAssistant = callable("askAssistant");
+export const getMyOrderHistory = callable("getMyOrderHistory");
+export const getMyRecommendations = callable("getMyRecommendations");

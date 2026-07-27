@@ -15,7 +15,8 @@
     "test:inventory": "node test-inventory.js",
     "test:orders": "node test-orders.js",
     "test:billing": "node test-billing.js",
-    "test:menu": "node test-menu.js"
+    "test:menu": "node test-menu.js",
+    "test:members": "node test-members.js"
   },
   "engines": {
     "node": "22"

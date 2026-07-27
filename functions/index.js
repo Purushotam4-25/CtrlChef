@@ -17,6 +17,7 @@ const queue = require("./queue");
 const menu = require("./menu");
 const staff = require("./staff");
 const assistant = require("./assistant");
+const members = require("./members");
 
 exports.addOrderItem = orders.addOrderItem;
 exports.cancelOrderItem = orders.cancelOrderItem;
@@ -37,3 +38,5 @@ exports.seatFromQueue = queue.seatFromQueue;
 exports.upsertDish = menu.upsertDish;
 exports.createStaffMember = staff.createStaffMember;
 exports.askAssistant = assistant.askAssistant;
+exports.getMyOrderHistory = members.getMyOrderHistory;
+exports.getMyRecommendations = members.getMyRecommendations;

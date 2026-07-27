@@ -22,6 +22,7 @@ export function OpsDataProvider({ children }) {
   const [staffList, setStaffList] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [queueList, setQueueList] = useState([]);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,9 +89,19 @@ export function OpsDataProvider({ children }) {
     return onSnapshot(q, (snap) => setQueueList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
   }, [currentStaff]);
 
+  useEffect(() => {
+    if (!currentStaff) return;
+    // Waiter member search (TableMap) and the manager Customers tab both
+    // need the full member list — staff can already read it per
+    // firestore.rules.
+    return onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "members"), (snap) =>
+      setMembers(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    );
+  }, [currentStaff]);
+
   return (
     <OpsDataContext.Provider
-      value={{ restaurant, tables, openOrders, allOrders, ingredients, staffList, dishes, queueList, loading }}
+      value={{ restaurant, tables, openOrders, allOrders, ingredients, staffList, dishes, queueList, members, loading }}
     >
       {children}
     </OpsDataContext.Provider>

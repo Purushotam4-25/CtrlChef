@@ -10,6 +10,8 @@ import Home from "./pages/guest/Home";
 import Menu from "./pages/guest/Menu";
 import Queue from "./pages/guest/Queue";
 import TableStatus from "./pages/guest/TableStatus";
+import Account from "./pages/guest/Account";
+import OrderHistory from "./pages/guest/OrderHistory";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import StaffRedirect from "./pages/StaffRedirect";
@@ -33,6 +35,8 @@ export default function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/queue" element={<Queue />} />
         <Route path="/table/:tableId" element={<TableStatus />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/account/orders" element={<OrderHistory />} />
       </Route>
 
       <Route path="/login" element={<Login />} />
