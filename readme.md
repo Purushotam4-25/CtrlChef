@@ -29,18 +29,17 @@ claimed unless it actually works against the real backend.
 **Bronze — done.** UI/UX for guest and staff surfaces, built off the
 provided mockups.
 
-**Silver — mostly done, one gap.** Digital menu with live availability,
-order management, queue check-in, and billing are all built and wired to
-real Firestore data. The gap: authentication is email/password only —
-there is no Google OAuth and no OTP/email verification — so the
-"secure sign-in" user story (US2) is incomplete as specified.
+**Silver — done.** Digital menu with live availability, order management,
+queue check-in, and billing are all built and wired to real Firestore
+data. Authentication supports email/password, Google OAuth, and Firebase
+email verification as the OTP-equivalent (see AI Usage note: none of this
+is AI-generated fluff — it's Firebase's own sign-in providers). Role-based
+access is enforced both client-side and in `firestore.rules`.
 
-**Gold — mostly done.** Order management, table management, inventory
-tracking, staff management, sales tracking, and analytics all work end to
-end. One gap: the manager dashboard has Analytics, Inventory, Forecast,
-Assistant, and Staff tabs, but no dedicated Orders/Tables/Customers tabs
-with CRUD — that data is visible through Analytics but not directly
-manageable from the UI yet.
+**Gold — done.** Order management, table management, inventory tracking,
+staff management, sales tracking, and analytics all work end to end. The
+manager dashboard has full CRUD on Orders (read-only history), Tables,
+Menu/dishes, Inventory, and Staff, plus dietary tags and site branding.
 
 **Platinum — partially done.** Stock forecasting and operational insights
 are real, computed from actual order history (see below — it's a
