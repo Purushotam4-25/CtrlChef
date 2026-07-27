@@ -3,10 +3,10 @@ import { fmtINR } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
 import { Panel } from "../../components/ops/primitives";
 
-// Plain aggregation over members + the same live `allOrders` list the
-// Orders tab reads (capped at 50 most recent, same caveat as that tab —
-// not an export tool). No new backend call: everything here is already in
-// OpsDataContext.
+// Plain aggregation over members + `closedOrders` (unbounded, unlike the
+// Orders tab's capped `allOrders` — a member's lifetime spend needs their
+// full history, not just the 50 most recent orders restaurant-wide). No new
+// backend call: everything here is already in OpsDataContext.
 export default function CustomersTab({ members, orders }) {
   const { T } = useOpsTheme();
 

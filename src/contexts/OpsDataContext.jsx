@@ -18,6 +18,7 @@ export function OpsDataProvider({ children }) {
   const [tables, setTables] = useState([]);
   const [openOrders, setOpenOrders] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
+  const [closedOrders, setClosedOrders] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [dishes, setDishes] = useState([]);
@@ -66,6 +67,16 @@ export function OpsDataProvider({ children }) {
     // live dashboard, not an export tool.
     const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), orderBy("createdAt", "desc"), limit(50));
     return onSnapshot(q, (snap) => setAllOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
+  }, [currentStaff]);
+
+  useEffect(() => {
+    if (!currentStaff) return;
+    // Unbounded, unlike allOrders above — the Customers tab needs every
+    // member's real lifetime totals, not just the 50 most recent orders
+    // restaurant-wide. Fine at demo scale, same tradeoff as the other
+    // full-collection listeners in this file.
+    const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), where("status", "==", "closed"));
+    return onSnapshot(q, (snap) => setClosedOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
   }, [currentStaff]);
 
   useEffect(() => {
@@ -119,7 +130,20 @@ export function OpsDataProvider({ children }) {
 
   return (
     <OpsDataContext.Provider
-      value={{ restaurant, tables, openOrders, allOrders, ingredients, staffList, dishes, queueList, members, loading, error }}
+      value={{
+        restaurant,
+        tables,
+        openOrders,
+        allOrders,
+        closedOrders,
+        ingredients,
+        staffList,
+        dishes,
+        queueList,
+        members,
+        loading,
+        error,
+      }}
     >
       {children}
     </OpsDataContext.Provider>

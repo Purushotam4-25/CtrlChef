@@ -38,7 +38,8 @@ const TAB_GROUPS = [
 export default function Dashboard() {
   const { T } = useOpsTheme();
   const [tab, setTab] = useState("analytics");
-  const { restaurant, ingredients, dishes, staffList, tables, openOrders, allOrders, queueList, members } = useOpsData();
+  const { restaurant, ingredients, dishes, staffList, tables, openOrders, allOrders, closedOrders, queueList, members } =
+    useOpsData();
   const [revenueTonight, setRevenueTonight] = useState(0);
   const [revenueError, setRevenueError] = useState(false);
 
@@ -98,7 +99,7 @@ export default function Dashboard() {
         {tab === "menu" && <MenuTab dishes={dishes} ingredients={ingredients} restaurant={restaurant} />}
         {tab === "inventory" && <InventoryTab ingredients={ingredients} dishes={dishes} />}
         {tab === "staff" && <StaffTab staff={staffList} />}
-        {tab === "customers" && <CustomersTab members={members} orders={allOrders} />}
+        {tab === "customers" && <CustomersTab members={members} orders={closedOrders} />}
         {tab === "analytics" && <AnalyticsTab />}
         {tab === "forecast" && <ForecastTab />}
         {tab === "assistant" && <AssistantTab />}
