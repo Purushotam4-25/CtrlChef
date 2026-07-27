@@ -13,13 +13,14 @@ import OrdersTab from "./OrdersTab";
 import TablesTab from "./TablesTab";
 import MenuTab from "./MenuTab";
 import SettingsTab from "./SettingsTab";
+import CustomersTab from "./CustomersTab";
 
 // Grouped now that there are 9 tabs — a flat row of that many stopped being
 // scannable. Still a plain wrapping bar, not a nested/dropdown nav.
 const TAB_GROUPS = [
   { group: "Operations", items: [{ key: "orders", label: "Orders" }, { key: "tables", label: "Tables" }] },
   { group: "Catalogue", items: [{ key: "menu", label: "Menu" }, { key: "inventory", label: "Inventory" }] },
-  { group: "People", items: [{ key: "staff", label: "Staff" }] },
+  { group: "People", items: [{ key: "staff", label: "Staff" }, { key: "customers", label: "Customers" }] },
   {
     group: "Insight",
     items: [
@@ -34,7 +35,7 @@ const TAB_GROUPS = [
 export default function Dashboard() {
   const { T } = useOpsTheme();
   const [tab, setTab] = useState("analytics");
-  const { restaurant, ingredients, dishes, staffList, tables, openOrders, allOrders, queueList } = useOpsData();
+  const { restaurant, ingredients, dishes, staffList, tables, openOrders, allOrders, queueList, members } = useOpsData();
   const [revenueTonight, setRevenueTonight] = useState(0);
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function Dashboard() {
       {tab === "menu" && <MenuTab dishes={dishes} ingredients={ingredients} restaurant={restaurant} />}
       {tab === "inventory" && <InventoryTab ingredients={ingredients} dishes={dishes} />}
       {tab === "staff" && <StaffTab staff={staffList} />}
+      {tab === "customers" && <CustomersTab members={members} orders={allOrders} />}
       {tab === "analytics" && <AnalyticsTab />}
       {tab === "forecast" && <ForecastTab />}
       {tab === "assistant" && <AssistantTab />}

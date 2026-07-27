@@ -1,16 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGuestData } from "../../contexts/GuestDataContext";
 import { useGuestTheme } from "../../contexts/ThemeContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { SkeletonGrid } from "../../components/Skeleton";
 import { fmtINR } from "../../lib/format";
+import { getMyRecommendations } from "../../lib/api";
 
 export default function Menu() {
   const { dishes, loading } = useGuestData();
   const { T } = useGuestTheme();
+  const { user, accountType } = useAuth();
   const [search, setSearch] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [category, setCategory] = useState("All");
   const [activeTags, setActiveTags] = useState([]);
+  const [usuals, setUsuals] = useState([]);
+
+  // Additive only — a signed-out guest or a member with no order history
+  // just sees the normal menu, unchanged.
+  useEffect(() => {
+    if (accountType !== "member") {
+      setUsuals([]);
+      return;
+    }
+    getMyRecommendations({ memberId: user.uid }).then((res) => setUsuals(res.recommendations));
+  }, [accountType, user]);
 
   const categories = useMemo(() => ["All", ...new Set(dishes.map((d) => d.category))], [dishes]);
   const allTags = useMemo(() => [...new Set(dishes.flatMap((d) => d.tags || []))], [dishes]);
@@ -34,6 +48,27 @@ export default function Menu() {
       <div className="mb-5 text-sm" style={{ color: T.dim }}>
         Availability updates as orders come in. Greyed items are out for the night.
       </div>
+
+      {usuals.length > 0 && (
+        <div className="mb-5">
+          <div className="mb-0.5 text-[13.5px] font-bold">Your usuals</div>
+          <div className="mb-2 text-[11.5px]" style={{ color: T.faint }}>
+            Based on how often you've ordered — not a recommendation engine, just a count of what's still available.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {usuals.map((u) => (
+              <div
+                key={u.dishId}
+                className="flex items-center gap-2 rounded-full border py-1.5 pl-3.5 pr-2"
+                style={{ borderColor: T.borderDashed, background: T.panel }}
+              >
+                <span className="text-[13px] font-semibold">{u.name}</span>
+                <span className="font-mono text-[12px]" style={{ color: T.faint }}>{fmtINR(u.price)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-3.5 flex items-center gap-3">
         <input

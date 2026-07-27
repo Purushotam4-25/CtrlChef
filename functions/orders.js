@@ -16,7 +16,7 @@ const db = getFirestore();
 // while it was running, so the second one automatically retries and sees
 // the updated stock.
 exports.addOrderItem = onCall(async (request) => {
-  const { restaurantId, tableId, dishId } = request.data;
+  const { restaurantId, tableId, dishId, memberId } = request.data;
   const qty = Number(request.data.qty);
 
   if (!restaurantId || !tableId || !dishId || !Number.isInteger(qty) || qty <= 0) {
@@ -24,6 +24,9 @@ exports.addOrderItem = onCall(async (request) => {
       "invalid-argument",
       "restaurantId, tableId, dishId and a positive integer qty are required"
     );
+  }
+  if (memberId !== undefined && typeof memberId !== "string") {
+    throw new HttpsError("invalid-argument", "memberId must be a string");
   }
 
   await requireStaffRole(request, restaurantId, WAITER_OR_MANAGER);
@@ -117,6 +120,10 @@ exports.addOrderItem = onCall(async (request) => {
       status: "open",
       items: [item],
       totalAmount: item.price * qty,
+      // Optional, set once at order creation only — the waiter can attach a
+      // known member when starting the tab (see TableMap.jsx). Not touched
+      // again on later addOrderItem calls for this same order.
+      ...(memberId ? { memberId } : {}),
     });
     return { orderId: newOrderRef.id };
   });

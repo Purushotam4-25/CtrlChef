@@ -1,6 +1,12 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as fbSignOut } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  signOut as fbSignOut,
+} from "firebase/auth";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { auth, db, RESTAURANT_ID } from "../firebase";
 
 const AuthContext = createContext(null);
@@ -8,6 +14,8 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined); // undefined = not resolved yet, null = signed out
   const [staffByUid, setStaffByUid] = useState({}); // uid -> staff doc | null, once resolved
+  const [memberByUid, setMemberByUid] = useState({}); // uid -> member doc | null, once resolved
+  const provisioning = useRef(new Set()); // uids currently mid-write, guards against a duplicate create while the snapshot round-trips
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
 
@@ -19,18 +27,61 @@ export function AuthProvider({ children }) {
     });
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const memberRef = doc(db, "restaurants", RESTAURANT_ID, "members", user.uid);
+    return onSnapshot(memberRef, (snap) => {
+      setMemberByUid((prev) => ({ ...prev, [user.uid]: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
+    });
+  }, [user]);
+
   // Keyed by uid (rather than a separate "loading" flag set in an effect) so
   // there's no render where a just-signed-in user momentarily reads as
-  // "resolved, no staff doc" before its fetch has actually run.
+  // "resolved, nothing found" before its fetch has actually run.
   const staffResolved = !user || user.uid in staffByUid;
+  const memberResolved = !user || user.uid in memberByUid;
   const staff = user ? staffByUid[user.uid] ?? null : null;
+  const member = user ? memberByUid[user.uid] ?? null : null;
+
+  // Anyone signed in who's neither staff nor already a member becomes a
+  // member automatically — there's no separate "request access" step on the
+  // guest side, and firestore.rules already permits exactly this write
+  // (create/update your own members/{memberId}, nothing else). signUpMember
+  // below writes this doc itself right after account creation (with the
+  // name from the signup form), so in practice this effect only ever fires
+  // as a fallback for a signed-in account that reached the app some other
+  // way with no doc yet.
+  useEffect(() => {
+    if (!user || !staffResolved || !memberResolved) return;
+    if (staff || member) return;
+    if (provisioning.current.has(user.uid)) return;
+    provisioning.current.add(user.uid);
+    setDoc(doc(db, "restaurants", RESTAURANT_ID, "members", user.uid), {
+      name: user.displayName || user.email || "Member",
+      email: user.email || "",
+    }).finally(() => provisioning.current.delete(user.uid));
+  }, [user, staff, member, staffResolved, memberResolved]);
+
+  const accountType = staff ? "staff" : member ? "member" : null;
 
   const value = {
     user,
     staff,
+    member,
     role: staff?.role || null,
-    loading: user === undefined || !staffResolved,
+    accountType, // "staff" | "member" | null
+    loading: user === undefined || !staffResolved || !memberResolved,
     signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+    // Member self-signup — staff accounts are still manager-provisioned only
+    // (createStaffMember). Writes the member doc itself with the real name
+    // instead of relying on the fallback effect above, which can't see a
+    // freshly-set displayName until the next auth-state event.
+    signUpMember: async (name, email, password) => {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      if (name) await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, "restaurants", RESTAURANT_ID, "members", cred.user.uid), { name: name || email, email });
+      return cred;
+    },
     signOut: () => fbSignOut(auth),
   };
 

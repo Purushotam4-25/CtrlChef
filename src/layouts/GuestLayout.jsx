@@ -59,6 +59,13 @@ export default function GuestLayout() {
             {mode === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <NavLink
+            to="/account"
+            className="rounded-lg border px-4 py-2 text-[13.5px] font-semibold transition-colors hover:opacity-80"
+            style={{ borderColor: T.border, background: T.panel, color: T.text }}
+          >
+            Account
+          </NavLink>
+          <NavLink
             to="/login"
             className="rounded-lg border px-4 py-2 text-[13.5px] font-semibold transition-colors hover:opacity-80"
             style={{ borderColor: T.border, background: T.panel, color: T.text }}

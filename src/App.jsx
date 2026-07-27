@@ -8,6 +8,8 @@ import OpsLayout from "./layouts/OpsLayout";
 import Home from "./pages/guest/Home";
 import Menu from "./pages/guest/Menu";
 import Queue from "./pages/guest/Queue";
+import Account from "./pages/guest/Account";
+import OrderHistory from "./pages/guest/OrderHistory";
 import Login from "./pages/Login";
 import StaffRedirect from "./pages/StaffRedirect";
 import TableMap from "./pages/waiter/TableMap";
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/queue" element={<Queue />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/account/orders" element={<OrderHistory />} />
       </Route>
 
       <Route path="/login" element={<Login />} />
