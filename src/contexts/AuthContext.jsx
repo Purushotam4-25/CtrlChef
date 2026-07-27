@@ -23,9 +23,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user) return;
     const staffRef = doc(db, "restaurants", RESTAURANT_ID, "staff", user.uid);
-    return onSnapshot(staffRef, (snap) => {
-      setStaffByUid((prev) => ({ ...prev, [user.uid]: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
-    });
+    return onSnapshot(
+      staffRef,
+      (snap) => {
+        setStaffByUid((prev) => ({ ...prev, [user.uid]: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
+      },
+      // Rules deny reading a staff doc that doesn't exist (the isStaff() check
+      // does a get() on it), so a signed-in account with no staff doc errors
+      // here instead of just returning "not found". Without this, staffByUid
+      // never resolves for that uid and the app spins on "Loading…" forever —
+      // treat it the same as "no staff doc" so the explicit message shows.
+      () => setStaffByUid((prev) => ({ ...prev, [user.uid]: null }))
+    );
   }, [user]);
 
   // Keyed by uid (rather than a separate "loading" flag set in an effect) so
