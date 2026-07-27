@@ -90,7 +90,8 @@ export default function StaffTab({ staff }) {
       <div className="mb-3 flex justify-end">
         <Button variant="primary" onClick={openAdd}>+ Add staff</Button>
       </div>
-      <Panel className="overflow-hidden">
+      <Panel className="overflow-x-auto">
+        <div className="min-w-[640px]">
         <div className="grid grid-cols-[1.4fr_1fr_1fr_0.9fr_1.1fr] border-b px-4 py-2.5" style={{ borderColor: T.border }}>
           <div className="text-[11.5px] font-bold" style={{ color: T.faint }}>NAME</div>
           <div className="text-[11.5px] font-bold" style={{ color: T.faint }}>ROLE</div>
@@ -155,6 +156,7 @@ export default function StaffTab({ staff }) {
             </div>
           );
         })}
+        </div>
       </Panel>
 
       <Modal open={adding} onClose={() => setAdding(false)} width={340}>

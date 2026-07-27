@@ -7,15 +7,21 @@ import { useToast } from "../../contexts/ToastContext";
 import { useTransitionWatch } from "../../lib/useTransitionWatch";
 import { Button, Panel } from "../../components/ops/primitives";
 
-// ponytail: elapsed time is measured from when the item was first ordered
-// (addedAt), not from when it entered its current stage — the backend
-// doesn't stamp a per-stage timestamp. Add one in advanceOrderItemStatus if
-// per-stage timing turns out to matter more than total ticket age.
 function elapsedColor(ms, T) {
   const min = ms / 60000;
   if (min >= 20) return "#f87171";
   if (min >= 10) return "#fbbf24";
   return T.dim;
+}
+
+// Colour alone shouldn't be the only signal that a ticket is running late —
+// this tag rides alongside the coloured timer so it reads the same for a
+// colour-blind chef.
+function elapsedTag(ms) {
+  const min = ms / 60000;
+  if (min >= 20) return "LATE";
+  if (min >= 10) return "SLOW";
+  return null;
 }
 
 const COLUMNS = [
@@ -73,11 +79,13 @@ export default function Tickets() {
         table: tableNumberById[order.tableId] ?? "?",
         name: item.dishName,
         qty: item.qty,
-        addedAtMs: item.addedAt?.toDate?.().getTime() ?? Date.now(),
+        // Time in the *current* stage, not total ticket age — falls back to
+        // addedAt for items advanced before statusChangedAt existed.
+        stageStartMs: item.statusChangedAt?.toDate?.().getTime() ?? item.addedAt?.toDate?.().getTime() ?? Date.now(),
       });
     });
   });
-  Object.values(tickets).forEach((list) => list.sort((a, b) => a.addedAtMs - b.addedAtMs));
+  Object.values(tickets).forEach((list) => list.sort((a, b) => a.stageStartMs - b.stageStartMs));
 
   async function run(key, fn) {
     setError("");
@@ -107,9 +115,12 @@ export default function Tickets() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3.5">
+      {/* Below sm: swipeable kanban lanes, each ~85% of the viewport so the
+          next one peeks in as a scroll hint. sm and up: the original static
+          3-column grid. */}
+      <div className="grid auto-cols-[85%] grid-flow-col snap-x snap-mandatory gap-3.5 overflow-x-auto pb-2 sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-3 sm:overflow-visible sm:pb-0">
         {COLUMNS.map((col) => (
-          <div key={col.key}>
+          <div key={col.key} className="snap-start">
             <div className="mb-2 flex items-center gap-2 border-b-2 pb-2" style={{ borderColor: col.borderColor }}>
               <div className="text-[13px] font-bold" style={{ color: T.header }}>
                 {col.title}
@@ -126,8 +137,18 @@ export default function Tickets() {
                 <Panel key={tk.itemId} className="p-2.5">
                   <div className="flex items-baseline justify-between">
                     <div className="text-sm font-bold">Table {tk.table}</div>
-                    <div className="font-mono text-xs font-bold" style={{ color: elapsedColor(Date.now() - tk.addedAtMs, T) }}>
-                      {fmtElapsed(Date.now() - tk.addedAtMs)}
+                    <div className="flex items-center gap-1">
+                      <div className="font-mono text-xs font-bold" style={{ color: elapsedColor(Date.now() - tk.stageStartMs, T) }}>
+                        {fmtElapsed(Date.now() - tk.stageStartMs)}
+                      </div>
+                      {elapsedTag(Date.now() - tk.stageStartMs) && (
+                        <span
+                          className="rounded px-1 py-0.5 text-[8.5px] font-bold leading-none tracking-wide"
+                          style={{ color: elapsedColor(Date.now() - tk.stageStartMs, T), border: "1px solid currentColor" }}
+                        >
+                          {elapsedTag(Date.now() - tk.stageStartMs)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-0.5 text-[13.5px]" style={{ color: T.bright }}>

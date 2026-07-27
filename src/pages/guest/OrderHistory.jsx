@@ -9,17 +9,20 @@ export default function OrderHistory() {
   const { T } = useGuestTheme();
   const { user, accountType, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (accountType !== "member") return;
-    getMyOrderHistory({ memberId: user.uid }).then((res) => setOrders(res.orders));
+    getMyOrderHistory({ memberId: user.uid })
+      .then((res) => setOrders(res.orders))
+      .catch((err) => setError(err.message || "Couldn't load your order history."));
   }, [accountType, user]);
 
-  if (authLoading) return <div className="mx-auto max-w-[720px] px-8 py-14 text-sm" style={{ color: T.faint }}>Loading…</div>;
+  if (authLoading) return <div className="mx-auto max-w-[720px] px-4 sm:px-8 py-14 text-sm" style={{ color: T.faint }}>Loading…</div>;
 
   if (accountType !== "member") {
     return (
-      <div className="mx-auto max-w-[720px] px-8 py-14 text-center">
+      <div className="mx-auto max-w-[720px] px-4 sm:px-8 py-14 text-center">
         <div className="mb-3 text-[15px] font-bold">Sign in to see your order history</div>
         <Link to="/account" className="text-[13px] font-semibold underline" style={{ color: T.accent }}>
           Go to my account
@@ -29,11 +32,16 @@ export default function OrderHistory() {
   }
 
   return (
-    <div className="mx-auto max-w-[720px] px-8 pb-14 pt-10">
+    <div className="mx-auto max-w-[720px] px-4 sm:px-8 pb-14 pt-10">
       <div className="mb-1 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>MY ACCOUNT</div>
       <h1 className="mb-5 font-serif text-[28px] font-bold">Order history</h1>
 
-      {orders === null && <div className="text-sm" style={{ color: T.faint }}>Loading your orders…</div>}
+      {error && (
+        <div className="mb-4 rounded-md border border-red-800 bg-red-950/20 px-3.5 py-2.5 text-[13px] text-red-400">
+          {error}
+        </div>
+      )}
+      {!error && orders === null && <div className="text-sm" style={{ color: T.faint }}>Loading your orders…</div>}
       {orders?.length === 0 && <div className="text-sm" style={{ color: T.faint }}>No orders yet.</div>}
 
       <div className="flex flex-col gap-3">

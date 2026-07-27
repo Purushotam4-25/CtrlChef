@@ -43,9 +43,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user) return;
     const memberRef = doc(db, "restaurants", RESTAURANT_ID, "members", user.uid);
-    return onSnapshot(memberRef, (snap) => {
-      setMemberByUid((prev) => ({ ...prev, [user.uid]: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
-    });
+    return onSnapshot(
+      memberRef,
+      (snap) => {
+        setMemberByUid((prev) => ({ ...prev, [user.uid]: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
+      },
+      // Same reasoning as the staff listener above — resolve to "no member
+      // doc" rather than leaving memberByUid unresolved forever.
+      () => setMemberByUid((prev) => ({ ...prev, [user.uid]: null }))
+    );
   }, [user]);
 
   // Keyed by uid (rather than a separate "loading" flag set in an effect) so

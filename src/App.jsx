@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider, GuestThemeProvider } from "./contexts/ThemeContext";
 import { GuestDataProvider } from "./contexts/GuestDataContext";
@@ -15,9 +16,17 @@ import OrderHistory from "./pages/guest/OrderHistory";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import StaffRedirect from "./pages/StaffRedirect";
-import TableMap from "./pages/waiter/TableMap";
-import Tickets from "./pages/chef/Tickets";
-import Dashboard from "./pages/manager/Dashboard";
+
+// Guests — the surface a judge loads first, often on a phone — never hit
+// any of these three; lazy-loading them keeps that first bundle to just the
+// guest code instead of the whole staff app.
+const TableMap = lazy(() => import("./pages/waiter/TableMap"));
+const Tickets = lazy(() => import("./pages/chef/Tickets"));
+const Dashboard = lazy(() => import("./pages/manager/Dashboard"));
+
+function OpsFallback() {
+  return <div className="p-8 text-sm text-neutral-400">Loading…</div>;
+}
 
 export default function App() {
   return (
@@ -58,7 +67,9 @@ export default function App() {
           path="/waiter"
           element={
             <ProtectedRoute roles={["waiter", "manager"]}>
-              <TableMap />
+              <Suspense fallback={<OpsFallback />}>
+                <TableMap />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -66,7 +77,9 @@ export default function App() {
           path="/chef"
           element={
             <ProtectedRoute roles={["chef", "manager"]}>
-              <Tickets />
+              <Suspense fallback={<OpsFallback />}>
+                <Tickets />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -74,7 +87,9 @@ export default function App() {
           path="/manager"
           element={
             <ProtectedRoute roles={["manager"]}>
-              <Dashboard />
+              <Suspense fallback={<OpsFallback />}>
+                <Dashboard />
+              </Suspense>
             </ProtectedRoute>
           }
         />

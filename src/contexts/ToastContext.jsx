@@ -27,7 +27,9 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ notify }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+      {/* Clears the mobile bottom nav (see OpsLayout) below md; toasts never
+          appear on the guest surface, which has no such bar. */}
+      <div className="fixed bottom-20 right-4 z-[100] flex flex-col gap-2 md:bottom-4">
         {toasts.map((t) => (
           <Toast key={t.id} {...t} onDismiss={() => dismiss(t.id)} />
         ))}

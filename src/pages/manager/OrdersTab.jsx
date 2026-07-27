@@ -49,7 +49,8 @@ export default function OrdersTab({ orders, restaurant, tables, staffList }) {
         ))}
       </div>
 
-      <Panel className="overflow-hidden">
+      <Panel className="overflow-x-auto">
+        <div className="min-w-[640px]">
         <div className="grid grid-cols-[0.8fr_1fr_1fr_0.8fr_1fr_0.9fr_0.8fr] border-b px-4 py-2.5" style={{ borderColor: T.border }}>
           {["TABLE", "WAITER", "ITEMS", "TOTAL", "STATUS", "AGE", ""].map((h) => (
             <div key={h} className="text-[11.5px] font-bold" style={{ color: T.faint }}>{h}</div>
@@ -116,6 +117,7 @@ export default function OrdersTab({ orders, restaurant, tables, staffList }) {
         {filtered.length === 0 && (
           <div className="px-4 py-6 text-center text-[13px]" style={{ color: T.faint }}>No orders.</div>
         )}
+        </div>
       </Panel>
     </div>
   );

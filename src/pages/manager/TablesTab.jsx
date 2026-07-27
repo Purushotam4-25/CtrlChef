@@ -82,7 +82,8 @@ export default function TablesTab({ tables }) {
       <div className="mb-3 flex justify-end">
         <Button variant="primary" onClick={openNew}>+ Add table</Button>
       </div>
-      <Panel className="overflow-hidden">
+      <Panel className="overflow-x-auto">
+        <div className="min-w-[560px]">
         <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1.2fr] border-b px-4 py-2.5" style={{ borderColor: T.border }}>
           {["TABLE", "CAPACITY", "STATUS", "SEATED", "ACTION"].map((h) => (
             <div key={h} className="text-[11.5px] font-bold" style={{ color: T.faint }}>{h}</div>
@@ -130,6 +131,7 @@ export default function TablesTab({ tables }) {
             </div>
           </div>
         ))}
+        </div>
       </Panel>
 
       <Modal open={!!editing} onClose={() => setEditing(null)} width={320}>

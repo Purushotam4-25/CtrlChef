@@ -5,10 +5,23 @@ function cutoffTimestamp(days) {
   return Timestamp.fromMillis(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
+// Module-scope, instance-scoped cache — flipping between the Analytics tab,
+// the Forecast tab, and the assistant used to redo the same full-collection
+// scan every open. 30s TTL is short enough that demo-scale traffic never
+// needs it invalidated sooner; see plans/11.
+const ANALYTICS_CACHE_TTL_MS = 30000;
+const analyticsCache = new Map(); // `${restaurantId}:${days}` -> { result, expiresAt }
+
 // Query body behind getSalesAnalytics (see functions/analytics.js), pulled
 // out so the assistant callable can reuse the same numbers instead of
 // re-deriving them.
 async function computeSalesAnalytics(restaurantId, days) {
+  const cacheKey = `${restaurantId}:${days}`;
+  const cached = analyticsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.result;
+  }
+
   const db = getFirestore();
 
   // ponytail: fetches the full dishes/staff/ingredients collections every
@@ -124,7 +137,7 @@ async function computeSalesAnalytics(restaurantId, days) {
   const slowMovers = [...byDishList].sort((a, b) => a.qty - b.qty).slice(0, 5);
   const byStaffList = Object.values(byStaff).map(({ orderIds, ...rest }) => ({ ...rest, orderCount: orderIds.size }));
 
-  return {
+  const result = {
     windowDays: days,
     byDish: byDishList,
     topSellers,
@@ -137,6 +150,8 @@ async function computeSalesAnalytics(restaurantId, days) {
     totalCost,
     missingCostIngredientIds: [...missingCostIngredientIds],
   };
+  analyticsCache.set(cacheKey, { result, expiresAt: Date.now() + ANALYTICS_CACHE_TTL_MS });
+  return result;
 }
 
 module.exports = { computeSalesAnalytics, cutoffTimestamp };

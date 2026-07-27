@@ -1,5 +1,5 @@
 const { onCall, HttpsError } = require("firebase-functions/https");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { requireStaffRole } = require("./lib/auth");
 
 const db = getFirestore();
@@ -21,7 +21,9 @@ const ADVANCE_ROLES = {
 // Called by the chef's screen to move one order item forward one stage:
 // received -> preparing -> ready -> served. Rejects skipping stages and
 // rejects moving backwards.
-exports.advanceOrderItemStatus = onCall(async (request) => {
+// minInstances keeps one instance warm — this is the chef/waiter's
+// most-clicked button (see plans/11).
+exports.advanceOrderItemStatus = onCall({ minInstances: 1 }, async (request) => {
   const { restaurantId, orderId, itemId, newStatus } = request.data;
 
   // Object.hasOwn (not `!ADVANCE_ROLES[newStatus]`) — a plain `[newStatus]`
@@ -59,7 +61,9 @@ exports.advanceOrderItemStatus = onCall(async (request) => {
     }
 
     const items = [...order.items];
-    items[itemIndex] = { ...items[itemIndex], itemStatus: newStatus };
+    // Lets the chef board measure elapsed time in the *current* stage
+    // instead of total ticket age since addedAt — see Tickets.jsx.
+    items[itemIndex] = { ...items[itemIndex], itemStatus: newStatus, statusChangedAt: Timestamp.now() };
     t.update(orderRef, { items });
 
     return { itemId, itemStatus: newStatus };

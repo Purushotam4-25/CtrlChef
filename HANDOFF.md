@@ -13,8 +13,8 @@ the Gemini/Groq/template assistant, billing (with discounts and bill
 splitting), the full manager dashboard (menu/inventory/tables/staff CRUD,
 customers, dietary tags, site branding), Google sign-in, email verification,
 signup, password reset, the public menu, in-app toast notifications, guest
-order tracking, and optional customer accounts (members) are working
-locally.
+order tracking, optional customer accounts (members), and a full responsive/
+error-states/a11y/perf polish pass are working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -33,12 +33,18 @@ Firebase project: `ctrlchef-b8ba2`. Blaze is enabled. `GEMINI_API_KEY` and
    the assistant always falls through to Groq. Groq answers fine, but Gemini
    itself hasn't been demoed live yet. See Session Log below.
 3. Manually click through the new manager CRUD screens, billing/split-bill UI,
-   the auth screens (Google sign-in, signup, password reset), and now the
-   toasts and `/table/:tableId` tracker too — none have had a manual pass yet.
+   the auth screens (Google sign-in, signup, password reset), the toasts,
+   the `/table/:tableId` tracker, and now the whole responsive/mobile-nav
+   pass (plan 11) — none have had a manual pass on the ops surface yet. The
+   last session had no Java runtime to run the emulators, so plan 11's
+   backend changes and the ops surface (waiter/chef/manager) were reviewed
+   and syntax-checked but never clicked through live or run against the real
+   test suites — do that first, before anything else here.
 4. FCM push on the same three notification triggers, only if there's slack —
    the plan calls it a bonus and a permission prompt mid-demo is a real risk.
 
-Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
+Detailed plans live in `plans/`; completed ones are archived to
+`plans/done/`.
 
 ## Local Commands
 
@@ -76,6 +82,21 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
   through `seatFromQueue` is possible now — not switched over yet.
 
 ## Session Log
+
+### 2026-07-27 — Polish: responsive, error states, a11y, perf (plan 11)
+
+Built out the whole of `plans/11-polish-responsive-a11y.md`, now archived to
+`plans/done/`. Responsive breakpoints across ops (`TableMap`, `Tickets`,
+`Dashboard`, `AnalyticsTab`, mobile sidebar→bottom-nav) and guest
+(`Menu`/`Home`/`Queue`, plus `GuestLayout`'s nav collapsing to a hamburger);
+`Modal` rebuilt on native `<dialog>` (focus trap/Escape/restore for free);
+`.catch` + `onSnapshot` error callbacks everywhere a failure used to be
+silent or read as a fake zero; non-colour ticket-age tags, `aria-label`s,
+and a real light-theme contrast fix; `statusChangedAt` for per-stage ticket
+timing; `manualChunks` + `React.lazy` on the whole manager dashboard;
+`minInstances` + a 30s cache on the hot-path callables. Full breakdown in
+`WORKLOG.md`. No Java runtime this session, so the emulators never ran —
+see What Still Needs Doing above, that's the very next thing to do.
 
 ### 2026-07-27 — Members: login, order history, usuals, Customers tab
 

@@ -36,7 +36,7 @@ export default function TableStatus() {
   }, [tableId]);
 
   return (
-    <div className="mx-auto max-w-[600px] px-8 pb-14 pt-10">
+    <div className="mx-auto max-w-[600px] px-4 sm:px-8 pb-14 pt-10">
       <div className="mb-1 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>
         YOUR ORDER
       </div>

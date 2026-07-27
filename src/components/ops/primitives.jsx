@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useOpsTheme } from "../../contexts/ThemeContext";
 import { STATUS_COLORS } from "../../opsTheme";
 
@@ -69,7 +70,7 @@ export function Toast({ kind = "info", title, body, onDismiss }) {
   return (
     <div
       onClick={onDismiss}
-      className="w-[300px] cursor-pointer rounded-lg border border-l-4 p-3 shadow-lg transition-opacity hover:opacity-90"
+      className="w-[calc(100vw-2rem)] max-w-[300px] cursor-pointer rounded-lg border border-l-4 p-3 shadow-lg transition-opacity hover:opacity-90"
       style={{ background: T.panel, borderColor: T.borderAlt, borderLeftColor: TOAST_ACCENT[kind] || T.accent }}
     >
       <div className="text-[13px] font-bold" style={{ color: T.bright }}>
@@ -84,21 +85,42 @@ export function Toast({ kind = "info", title, body, onDismiss }) {
   );
 }
 
+// Native <dialog> gets a focus trap, Escape-to-close, and the implicit
+// role="dialog"/aria-modal semantics for free once shown via showModal() —
+// none of which the old hand-rolled fixed-overlay div had. `open` is never
+// passed as a DOM attribute; it's applied imperatively via ref so the
+// browser actually promotes the element into the modal top layer (a plain
+// `open` attribute renders it inline, non-modal, with no backdrop or focus
+// trap).
 export function Modal({ open, onClose, children, width = 360 }) {
   const { T } = useOpsTheme();
-  if (!open) return null;
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55"
-      onClick={onClose}
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      // Clicking the ::backdrop targets the <dialog> element itself (there's
+      // nothing else there to hit) — the standard way to detect a
+      // click-outside on a native dialog.
+      onClick={(e) => {
+        if (e.target === dialogRef.current) onClose();
+      }}
+      className="max-h-[85vh] max-w-[90vw] rounded-xl border-0 bg-transparent p-0 [&::backdrop]:bg-black/55"
     >
       <div
         className="max-h-[80vh] overflow-y-auto rounded-xl border p-4"
-        style={{ background: T.panel, borderColor: T.borderAlt, width }}
-        onClick={(e) => e.stopPropagation()}
+        style={{ background: T.panel, borderColor: T.borderAlt, width, maxWidth: "90vw" }}
       >
         {children}
       </div>
-    </div>
+    </dialog>
   );
 }

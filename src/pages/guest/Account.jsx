@@ -44,12 +44,12 @@ export default function Account() {
   }
 
   if (loading) {
-    return <div className="mx-auto max-w-[420px] px-8 py-14 text-sm" style={{ color: T.faint }}>Loading…</div>;
+    return <div className="mx-auto max-w-[420px] px-4 sm:px-8 py-14 text-sm" style={{ color: T.faint }}>Loading…</div>;
   }
 
   if (user && accountType === "staff") {
     return (
-      <div className="mx-auto max-w-[420px] px-8 py-14 text-center">
+      <div className="mx-auto max-w-[420px] px-4 sm:px-8 py-14 text-center">
         <div className="mb-2 text-[15px] font-bold">You're signed in as staff</div>
         <div className="mb-4 text-[13.5px]" style={{ color: T.dim }}>
           This account isn't a customer account. Head to the staff portal instead.
@@ -63,7 +63,7 @@ export default function Account() {
 
   if (user && accountType === "member") {
     return (
-      <div className="mx-auto max-w-[420px] px-8 py-14">
+      <div className="mx-auto max-w-[420px] px-4 sm:px-8 py-14">
         <div className="mb-1 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>MY ACCOUNT</div>
         <h1 className="mb-4 font-serif text-[26px] font-bold">Hi, {member.name}</h1>
         <div className="flex flex-col gap-2">
@@ -89,11 +89,11 @@ export default function Account() {
   if (user) {
     // Signed in, but the member doc hasn't landed yet (auto-provisioned by
     // AuthContext) — a brief transitional state, not a dead end.
-    return <div className="mx-auto max-w-[420px] px-8 py-14 text-sm" style={{ color: T.faint }}>Setting up your account…</div>;
+    return <div className="mx-auto max-w-[420px] px-4 sm:px-8 py-14 text-sm" style={{ color: T.faint }}>Setting up your account…</div>;
   }
 
   return (
-    <div className="mx-auto max-w-[420px] px-8 py-14">
+    <div className="mx-auto max-w-[420px] px-4 sm:px-8 py-14">
       <div className="mb-1 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>MY ACCOUNT</div>
       <h1 className="mb-2 font-serif text-[26px] font-bold">{mode === "signup" ? "Create an account" : "Sign in"}</h1>
       <p className="mb-5 text-[13.5px]" style={{ color: T.dim }}>

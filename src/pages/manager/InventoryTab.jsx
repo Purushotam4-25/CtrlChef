@@ -36,6 +36,8 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
   });
 
   const arrow = (key) => (sortKey === key ? (sortDir > 0 ? "↑" : "↓") : "");
+  const sortLabel = (key, label) =>
+    `Sort by ${label}${sortKey === key ? (sortDir > 0 ? ", ascending" : ", descending") : ""}`;
 
   async function submitRestock(e) {
     e.preventDefault();
@@ -134,12 +136,23 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
       <div className="mb-3 flex justify-end">
         <Button variant="primary" onClick={openNew}>+ Add ingredient</Button>
       </div>
-      <Panel className="overflow-hidden">
+      <Panel className="overflow-x-auto">
+        <div className="min-w-[640px]">
         <div className="grid grid-cols-[1.4fr_1fr_1fr_0.8fr_1.3fr] border-b px-4 py-2.5" style={{ borderColor: T.border }}>
-          <button className="text-left text-[11.5px] font-bold transition-opacity hover:opacity-70" style={{ color: T.faint }} onClick={() => sortBy("name")}>
+          <button
+            className="text-left text-[11.5px] font-bold transition-opacity hover:opacity-70"
+            style={{ color: T.faint }}
+            onClick={() => sortBy("name")}
+            aria-label={sortLabel("name", "ingredient name")}
+          >
             INGREDIENT {arrow("name")}
           </button>
-          <button className="text-left text-[11.5px] font-bold transition-opacity hover:opacity-70" style={{ color: T.faint }} onClick={() => sortBy("stock")}>
+          <button
+            className="text-left text-[11.5px] font-bold transition-opacity hover:opacity-70"
+            style={{ color: T.faint }}
+            onClick={() => sortBy("stock")}
+            aria-label={sortLabel("stock", "stock level")}
+          >
             STOCK {arrow("stock")}
           </button>
           <div className="text-[11.5px] font-bold" style={{ color: T.faint }}>
@@ -186,6 +199,7 @@ export default function InventoryTab({ ingredients, dishes = [] }) {
             </div>
           </div>
         ))}
+        </div>
       </Panel>
 
       <Modal open={!!restockTarget} onClose={() => setRestockTarget(null)} width={320}>

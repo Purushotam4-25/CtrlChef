@@ -83,7 +83,7 @@ export default function Login() {
     }
   }
 
-  const card = "w-[340px] rounded-xl border border-[#35302b] bg-[#211e1b] p-6";
+  const card = "w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#35302b] bg-[#211e1b] p-6";
   const header = (
     <div className="mb-1 flex items-center gap-2.5">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#c2662f]">

@@ -12,17 +12,31 @@ export function GuestDataProvider({ children }) {
   const [dishes, setDishes] = useState([]);
   const [queueList, setQueueList] = useState([]);
   const [loading, setLoading] = useState(true);
+  // A permission error on any of these listeners used to be silent — no
+  // error callback means the SDK just stops delivering updates. Surfaced as
+  // one shared flag; GuestLayout shows a small non-blocking banner for it.
+  const [error, setError] = useState(false);
 
   useEffect(
-    () => onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setRestaurant(snap.data() || null)),
+    () =>
+      onSnapshot(
+        doc(db, "restaurants", RESTAURANT_ID),
+        (snap) => setRestaurant(snap.data() || null),
+        () => setError(true)
+      ),
     []
   );
 
   useEffect(
-    () => onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "dishes"), (snap) => {
-      setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    }),
+    () =>
+      onSnapshot(
+        collection(db, "restaurants", RESTAURANT_ID, "dishes"),
+        (snap) => {
+          setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          setLoading(false);
+        },
+        () => setError(true)
+      ),
     []
   );
 
@@ -32,11 +46,15 @@ export function GuestDataProvider({ children }) {
       where("status", "==", "waiting"),
       orderBy("checkedInAt", "asc")
     );
-    return onSnapshot(q, (snap) => setQueueList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(
+      q,
+      (snap) => setQueueList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      () => setError(true)
+    );
   }, []);
 
   return (
-    <GuestDataContext.Provider value={{ restaurant, dishes, queueList, loading }}>
+    <GuestDataContext.Provider value={{ restaurant, dishes, queueList, loading, error }}>
       {children}
     </GuestDataContext.Provider>
   );

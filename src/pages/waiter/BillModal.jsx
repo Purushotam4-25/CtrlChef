@@ -193,7 +193,7 @@ export default function BillModal({ order, tableNumber, onClose, onClosed }) {
                 style={{ borderColor: T.border, background: T.panel2, color: T.text }}
               >
                 {name}
-                <button className="hover:opacity-70" style={{ color: T.faint }} onClick={() => removeName(name)}>×</button>
+                <button className="hover:opacity-70" style={{ color: T.faint }} onClick={() => removeName(name)} aria-label={`Remove ${name} from the split`}>×</button>
               </span>
             ))}
             <input

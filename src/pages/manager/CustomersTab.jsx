@@ -31,7 +31,8 @@ export default function CustomersTab({ members, orders }) {
       <div className="mb-3 text-[12.5px]" style={{ color: T.faint }}>
         Members only — order history from guests who never signed in isn't linked to anyone.
       </div>
-      <Panel className="overflow-hidden">
+      <Panel className="overflow-x-auto">
+        <div className="min-w-[640px]">
         <div className="grid grid-cols-[1.4fr_0.7fr_0.9fr_1fr_1fr] border-b px-4 py-2.5" style={{ borderColor: T.border }}>
           {["NAME", "VISITS", "TOTAL SPEND", "FAVOURITE DISH", "LAST VISIT"].map((h) => (
             <div key={h} className="text-[11.5px] font-bold" style={{ color: T.faint }}>{h}</div>
@@ -56,6 +57,7 @@ export default function CustomersTab({ members, orders }) {
         {rows.length === 0 && (
           <div className="px-4 py-6 text-center text-[13px]" style={{ color: T.faint }}>No members yet.</div>
         )}
+        </div>
       </Panel>
     </div>
   );

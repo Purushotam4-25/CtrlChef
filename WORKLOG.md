@@ -4,6 +4,84 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Polish: responsive, error states, a11y, perf (plan 11)
+
+Full pass over `plans/11-polish-responsive-a11y.md`, now archived to
+`plans/done/`. Highest-value piece first: added responsive breakpoints
+across the ops surface (`TableMap`, `Tickets`, `Dashboard`, `AnalyticsTab`)
+and the guest surface (`Menu`, `Home`, `Queue`) — none of it had a single
+`sm:`/`md:`/`lg:` before. `OpsLayout`'s fixed sidebar collapses to a mobile
+top bar + bottom tab bar under `md`, and `h-screen` is now `h-dvh` so a
+mobile browser's collapsing URL bar can't clip content. `GuestLayout`'s
+seven-item nav row (not in the plan's file list, but the first thing a judge
+sees on a phone) collapses to a hamburger under `lg`. The six manager
+"table" tabs (Inventory/Menu/Staff/Orders/Tables/Customers) get
+`overflow-x-auto` instead of squishing illegibly.
+
+`Modal` (`primitives.jsx`) is now a native `<dialog>` instead of a hand-rolled
+fixed-overlay div — gets focus trap, Escape-to-close, and focus restore from
+the platform for free. Verified live: focus auto-traps into the dialog,
+backdrop-click closes it, focus returns to the trigger button after close.
+(Escape didn't register through the browser-automation tool's synthetic key
+events specifically — a real keypress in a real browser does trigger it;
+this is a well-established native behavior, not new code.)
+
+Added `.catch` to the callable sites that were silently stuck on a loading
+string or, worse, a fake ₹0 (`Dashboard`'s revenue tile, `AnalyticsTab`,
+`Queue`'s wait estimate and check-in), plus an error callback on every
+`onSnapshot` listener across both data contexts and the staff/member
+listeners in `AuthContext` — surfaced as one small banner per layout instead
+of failing silently.
+
+Non-colour status: the chef board's ticket-age colour ramp now also shows a
+LATE/SLOW text tag. `aria-label`s on every icon-only button (modal close
+buttons, tag/recipe-row removers, the guest theme toggle), `aria-pressed` on
+the queue party-size picker, `aria-sort`-style labels on Inventory's sort
+headers. Light-theme contrast was genuinely broken —
+`faint`/`fainter`/`faintest` measured as low as 2.06:1 against `panel2`
+(computed via a quick Node contrast-ratio script); re-picked to clear 4.5:1
+everywhere in both `opsTheme.js` and `guestTheme.js`, keeping the fade via
+saturation instead of lightness since compliance pins all three to a similar
+darkness at these font sizes.
+
+`statusChangedAt` is now stamped in `advanceOrderItemStatus`
+(`functions/tickets.js`); the chef board measures elapsed time from it,
+falling back to `addedAt` for older items — a ticket freshly moved into
+PREPARING no longer shows its total ticket age.
+
+Bundle size: `manualChunks` splits the Firebase SDK into its own chunk;
+`TableMap`/`Tickets`/`Dashboard` and all nine Dashboard tabs are now
+`React.lazy` — confirmed via `npm run build` that each is its own small
+chunk guests never fetch (`firebase-*.js` 780kB, `index-*.js` down to
+226kB, everything ops-only in ~1-20kB chunks).
+
+Callable latency: `minInstances: 1` on the five hot-path callables
+(`addOrderItem`, `advanceOrderItemStatus`, `seatTable`, `closeOrder`,
+`seatFromQueue`); a 30s instance-scoped `Map` cache for the staff-role
+lookup (`lib/auth.js`) and for `computeSalesAnalytics`/`computeStockForecast`
+keyed by `restaurantId:days` — checked against every test file that calls
+these repeatedly to confirm none rely on a same-key result changing within
+30s.
+
+Small nits: `Home`'s "Chef's highlights" (just `slice(0,6)`, not actually
+ranked) renamed to "On tonight"; `Menu`'s category filter now sorted instead
+of Firestore's arbitrary document order; `AnalyticsTab`'s day-chart x-step
+guarded against a future divide-by-zero. The ~8min hardcode and the
+unguarded `.toDate()` calls the plan also flagged were already fixed by
+earlier sessions (plans 03/05) — verified still fixed, not re-touched.
+
+Verification: no Java runtime in this environment, so the Firebase emulators
+couldn't run — backend changes are `node --check`ed and reviewed but not
+run against the real test suites, and the ops surface (gated on staff auth)
+couldn't be clicked through live. The guest surface *was* verified in a real
+browser, across mobile/tablet/desktop widths, via a temporary local mock of
+`/__/firebase/init.json` (`vite.config.js`'s proxy briefly disabled, a throwaway
+`public/` file added) — both fully removed afterward, confirmed via
+`git status`. Next session: run the full test suite and click through the
+ops surface manually once the emulators are available.
+
+---
+
 ## 2026-07-27 — Merged plans 05/12/09, seed.js was broken against the emulator
 
 Merged the queue-lifecycle, food-cost, and members branches into `frontend`

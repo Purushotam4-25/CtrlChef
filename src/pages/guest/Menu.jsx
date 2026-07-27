@@ -23,10 +23,18 @@ export default function Menu() {
       setUsuals([]);
       return;
     }
-    getMyRecommendations({ memberId: user.uid }).then((res) => setUsuals(res.recommendations));
+    getMyRecommendations({ memberId: user.uid })
+      .then((res) => setUsuals(res.recommendations))
+      // Additive strip — a failure just means it doesn't show, same as having no history.
+      .catch((err) => console.error("getMyRecommendations failed:", err));
   }, [accountType, user]);
 
-  const categories = useMemo(() => ["All", ...new Set(dishes.map((d) => d.category))], [dishes]);
+  // Sorted — otherwise the filter row's order is just whatever order
+  // Firestore happens to return dishes in, which shuffles unpredictably.
+  const categories = useMemo(
+    () => ["All", ...[...new Set(dishes.map((d) => d.category))].sort((a, b) => a.localeCompare(b))],
+    [dishes]
+  );
   const allTags = useMemo(() => [...new Set(dishes.flatMap((d) => d.tags || []))], [dishes]);
 
   function toggleTag(tag) {
@@ -42,7 +50,7 @@ export default function Menu() {
   });
 
   return (
-    <div className="mx-auto max-w-[1240px] px-8 pb-14 pt-10">
+    <div className="mx-auto max-w-[1240px] px-4 pb-14 pt-10 sm:px-8">
       <div className="mb-1 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>LIVE TONIGHT</div>
       <h1 className="mb-2 font-serif text-[32px] font-bold">The menu</h1>
       <div className="mb-5 text-sm" style={{ color: T.dim }}>
@@ -120,7 +128,7 @@ export default function Menu() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3.5" style={{ color: T.faint }}>
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3" style={{ color: T.faint }}>
         {loading && <SkeletonGrid count={6} itemClassName="h-[140px]" />}
         {!loading && filtered.map((m) => (
           <div
@@ -158,7 +166,7 @@ export default function Menu() {
           </div>
         ))}
         {!loading && filtered.length === 0 && (
-          <div className="col-span-3 text-sm" style={{ color: T.faint }}>No dishes match that search.</div>
+          <div className="col-span-1 text-sm sm:col-span-2 lg:col-span-3" style={{ color: T.faint }}>No dishes match that search.</div>
         )}
       </div>
     </div>

@@ -19,9 +19,12 @@ export default function Home() {
 
   useEffect(() => {
     let cancelled = false;
-    estimateQueueWait({ partySize: SAMPLE_PARTY_SIZE }).then((res) => {
-      if (!cancelled) setWaitEstimate(res);
-    });
+    estimateQueueWait({ partySize: SAMPLE_PARTY_SIZE })
+      .then((res) => {
+        if (!cancelled) setWaitEstimate(res);
+      })
+      // Leaves waitLabel at its "—" fallback below rather than a fake number.
+      .catch((err) => console.error("estimateQueueWait failed:", err));
     return () => {
       cancelled = true;
     };
@@ -37,16 +40,16 @@ export default function Home() {
   const highlights = available.slice(0, 6);
 
   return (
-    <div className="mx-auto max-w-[1240px] px-8 pb-6 pt-14">
-      <div className="grid grid-cols-[1.1fr_0.9fr] items-start gap-10">
+    <div className="mx-auto max-w-[1240px] px-4 pb-6 pt-14 sm:px-8">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
         <div>
-          <h1 className="mb-2.5 font-serif text-[44px] font-bold leading-tight">
+          <h1 className="mb-2.5 font-serif text-[32px] font-bold leading-tight sm:text-[44px]">
             {restaurant?.name || "CtrlChef"}
           </h1>
           <div className="mb-6 text-[15.5px]" style={{ color: T.dim }}>
             {[restaurant?.cuisine, restaurant?.address, restaurant?.hoursLabel].filter(Boolean).join(" · ")}
           </div>
-          <div className="mb-7 flex gap-2.5">
+          <div className="mb-7 flex flex-wrap gap-2.5">
             <Link
               to="/menu"
               className="rounded-lg px-5 py-3 text-[14.5px] font-bold text-white transition-colors hover:opacity-90"
@@ -62,7 +65,7 @@ export default function Home() {
               Join the queue
             </Link>
           </div>
-          <div className="flex gap-9 border-t pt-4" style={{ borderColor: T.border }}>
+          <div className="flex flex-wrap gap-5 border-t pt-4 sm:gap-9" style={{ borderColor: T.border }}>
             <div>
               <div className="text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>GUESTS IN QUEUE</div>
               <div className="font-serif text-[26px] font-bold">{queueCount}</div>
@@ -78,9 +81,12 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Just the first 6 available dishes in Firestore's document order —
+            not ranked by anything, so this is named for what it actually is
+            rather than implying a curated pick. */}
         <div className="rounded-xl border p-5" style={{ borderColor: T.border, background: T.panel }}>
-          <div className="mb-0.5 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>TONIGHT'S PICKS</div>
-          <div className="mb-3.5 font-serif text-[19px] font-bold">Chef's highlights</div>
+          <div className="mb-0.5 text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>ON THE MENU</div>
+          <div className="mb-3.5 font-serif text-[19px] font-bold">On tonight</div>
           {highlights.map((h) => (
             <div key={h.id} className="flex items-center justify-between border-b py-2.5" style={{ borderColor: T.panel2 }}>
               <div>
@@ -102,7 +108,7 @@ export default function Home() {
 
       <div className="mt-12 border-t pt-8" style={{ borderColor: T.border }}>
         <div className="mb-4 text-[15px] font-bold">How it works</div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-lg border p-4 text-[13.5px]" style={{ borderColor: T.border, background: T.panel, color: T.cardText }}>
             Menu items grey out automatically when the kitchen runs low.
           </div>

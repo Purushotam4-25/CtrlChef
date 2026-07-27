@@ -116,18 +116,18 @@ export default function TableMap() {
         </div>
       )}
 
-      <div className="grid grid-cols-[260px_1fr] items-start gap-4">
+      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[260px_1fr]">
         <QueuePanel tables={tables} onError={(msg) => setError(msg)} />
 
         <div>
-          <div className="mb-4 grid grid-cols-4 gap-2.5">
+          <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatTile label="OCCUPIED" value={occupiedCount} />
             <StatTile label="EMPTY" value={emptyCount} />
             <StatTile label="NEEDS CLEANING" value={cleaningCount} />
             <StatTile label="OPEN TABS" value={fmtINR(openTabsTotal)} valueColor={T.accentBright} />
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             {loading && <SkeletonGrid count={8} itemClassName="h-[150px] text-neutral-500" />}
             {!loading && tables.map((t) => {
           const order = orderByTable[t.id];
@@ -246,7 +246,12 @@ export default function TableMap() {
       <Modal open={!!modalTable} onClose={() => setOrderModalTableId(null)}>
         <div className="mb-3 flex items-center justify-between">
           <div className="text-[15px] font-bold">Add to Table {modalTable?.number}</div>
-          <button style={{ color: T.dim }} className="text-lg transition-opacity hover:opacity-70" onClick={() => setOrderModalTableId(null)}>
+          <button
+            style={{ color: T.dim }}
+            className="text-lg transition-opacity hover:opacity-70"
+            onClick={() => setOrderModalTableId(null)}
+            aria-label="Close"
+          >
             ×
           </button>
         </div>

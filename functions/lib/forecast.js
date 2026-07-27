@@ -1,10 +1,21 @@
 const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 
+// Module-scope, instance-scoped cache — same reasoning and TTL as
+// lib/analytics.js's; see plans/11.
+const FORECAST_CACHE_TTL_MS = 30000;
+const forecastCache = new Map(); // `${restaurantId}:${days}` -> { result, expiresAt }
+
 // Query body behind getStockForecast (see functions/forecast.js), pulled out
 // so the assistant callable can reuse the exact same numbers instead of
 // re-deriving them — see the deleted-dish consumption bug this repo already
 // hit once from duplicated aggregation logic.
 async function computeStockForecast(restaurantId, days) {
+  const cacheKey = `${restaurantId}:${days}`;
+  const cached = forecastCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.result;
+  }
+
   const db = getFirestore();
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
   const cutoff = Timestamp.fromMillis(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -64,7 +75,9 @@ async function computeStockForecast(restaurantId, days) {
     return a.predictedStockoutInDays - b.predictedStockoutInDays;
   });
 
-  return { windowDays: days, forecast };
+  const result = { windowDays: days, forecast };
+  forecastCache.set(cacheKey, { result, expiresAt: Date.now() + FORECAST_CACHE_TTL_MS });
+  return result;
 }
 
 module.exports = { computeStockForecast };

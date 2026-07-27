@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { LogOut, Moon, Sun } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useOpsData } from "../contexts/OpsDataContext";
 import { useOpsTheme } from "../contexts/ThemeContext";
@@ -7,14 +8,14 @@ import { useToast } from "../contexts/ToastContext";
 import { useTransitionWatch } from "../lib/useTransitionWatch";
 
 const NAV_ITEMS = [
-  { to: "/waiter", label: "Waiter — Table Map", roles: ["waiter", "manager"] },
-  { to: "/chef", label: "Kitchen — Tickets", roles: ["chef", "manager"] },
-  { to: "/manager", label: "Manager — Dashboard", roles: ["manager"] },
+  { to: "/waiter", label: "Waiter — Table Map", shortLabel: "Tables", roles: ["waiter", "manager"] },
+  { to: "/chef", label: "Kitchen — Tickets", shortLabel: "Tickets", roles: ["chef", "manager"] },
+  { to: "/manager", label: "Manager — Dashboard", shortLabel: "Dashboard", roles: ["manager"] },
 ];
 
 export default function OpsLayout() {
   const { staff, signOut } = useAuth();
-  const { restaurant, ingredients } = useOpsData();
+  const { restaurant, ingredients, error: dataError } = useOpsData();
   const { mode, setTheme, T } = useOpsTheme();
   const { notify } = useToast();
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(staff?.role));
@@ -45,11 +46,22 @@ export default function OpsLayout() {
 
   return (
     <div
-      className="flex h-screen w-full overflow-hidden font-sans"
+      // h-dvh, not h-screen — 100vh is a fixed number that doesn't account
+      // for a mobile browser's collapsing URL bar, so it either clips
+      // content or leaves a dead gap depending on scroll state. 100dvh
+      // tracks the *actual* visible viewport instead.
+      // Column below md (mobile top bar + content + bottom nav stacked),
+      // row at md+ (sidebar beside content) — see the comment above the
+      // desktop sidebar for why DOM order still works both ways.
+      className="flex h-dvh w-full flex-col overflow-hidden font-sans md:flex-row"
       style={{ background: T.bg, color: T.text }}
     >
+      {/* Desktop sidebar — hidden below md, where the mobile top bar +
+          bottom nav below take over. Kept first in DOM so md:flex-row
+          still puts it on the left; it collapses to zero width when
+          hidden, so its position doesn't affect the mobile column layout. */}
       <div
-        className="flex w-[216px] flex-shrink-0 flex-col border-r p-3"
+        className="hidden w-[216px] flex-shrink-0 flex-col border-r p-3 md:flex"
         style={{ background: T.sidebar, borderColor: T.border }}
       >
         <div
@@ -124,8 +136,68 @@ export default function OpsLayout() {
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 overflow-y-auto px-7 py-5 pb-10">
+      {/* Mobile top bar — replaces the sidebar's header below md. */}
+      <div
+        className="flex flex-shrink-0 items-center justify-between border-b px-4 py-2.5 md:hidden"
+        style={{ background: T.sidebar, borderColor: T.border }}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: T.accent }}>
+            <div className="h-3.5 w-2.5 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
+          </div>
+          <div className="truncate text-[14px] font-bold leading-tight">{name}</div>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <button
+            onClick={() => setTheme(mode === "dark" ? "light" : "dark")}
+            aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="flex h-8 w-8 items-center justify-center rounded-md transition-opacity hover:opacity-70"
+            style={{ color: T.dim }}
+          >
+            {mode === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <button
+            onClick={signOut}
+            aria-label="Sign out"
+            title="Sign out"
+            className="flex h-8 w-8 items-center justify-center rounded-md transition-opacity hover:opacity-70"
+            style={{ color: T.dim }}
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="min-w-0 flex-1 overflow-y-auto px-4 py-4 md:px-7 md:py-5 md:pb-10">
+        {dataError && (
+          <div className="mb-3.5 rounded-md border border-red-800 bg-red-950/20 px-3 py-2 text-[12.5px] text-red-400">
+            Having trouble reaching the server — some information here may be out of date. Try refreshing.
+          </div>
+        )}
         <Outlet />
+      </div>
+
+      {/* Mobile bottom nav — replaces the sidebar's nav list below md. */}
+      <div
+        className="flex flex-shrink-0 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
+        style={{ background: T.sidebar, borderColor: T.border }}
+      >
+        {visibleItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold"
+            style={({ isActive }) => ({ color: isActive ? T.text : T.dim })}
+          >
+            {({ isActive }) => (
+              <>
+                <div className="h-1.5 w-1.5 rounded-sm" style={{ background: isActive ? T.accentBright : T.navInactiveDot }} />
+                {item.shortLabel}
+              </>
+            )}
+          </NavLink>
+        ))}
       </div>
     </div>
   );

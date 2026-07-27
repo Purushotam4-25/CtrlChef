@@ -6,7 +6,10 @@ export const GUEST_THEME = {
   light: {
     bg: "#F5F0E6", panel: "#FBF6EC", panel2: "#EFE7D8",
     border: "#E4D9C3", borderAlt: "#D8CBAE", borderDashed: "#B7A072",
-    text: "#302B27", dim: "#6B5F52", faint: "#8A7A63",
+    text: "#302B27", dim: "#6B5F52",
+    // Darkened to clear 4.5:1 against panel2 — same fix as opsTheme.js's
+    // light.faint, see the comment there.
+    faint: "#746651",
     accent: "#A35D3A", accentDark: "#8A4A2E",
     cardText: "#4a4038", pillOkBg: "rgba(94,120,98,0.15)", pillOkText: "#5E7862",
     pillOffBg: "rgba(139,123,99,0.2)", pillOffText: "#8A7A63",

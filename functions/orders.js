@@ -15,7 +15,9 @@ const db = getFirestore();
 // a transaction only commits if none of the documents it read changed
 // while it was running, so the second one automatically retries and sees
 // the updated stock.
-exports.addOrderItem = onCall(async (request) => {
+// minInstances keeps one instance warm so the waiter's most-clicked button
+// doesn't pay a 1-3s cold start on top of the round trip (see plans/11).
+exports.addOrderItem = onCall({ minInstances: 1 }, async (request) => {
   const { restaurantId, tableId, dishId, memberId } = request.data;
   const qty = Number(request.data.qty);
 

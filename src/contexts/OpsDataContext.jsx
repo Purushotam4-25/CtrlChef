@@ -24,30 +24,40 @@ export function OpsDataProvider({ children }) {
   const [queueList, setQueueList] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  // A permission error on any listener below used to be silent — no error
+  // callback means the SDK just stops delivering updates with nothing
+  // logged. Surfaced as one shared flag; OpsLayout shows a small
+  // non-blocking banner for it.
+  const [error, setError] = useState(false);
+  const onError = () => setError(true);
 
   useEffect(() => {
-    return onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setRestaurant(snap.data() || null));
+    return onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setRestaurant(snap.data() || null), onError);
   }, []);
 
   useEffect(() => {
     if (!currentStaff) return;
     // TableMap needs the restaurant's live serviceChargePct/gstPct to
     // preview a bill before closeOrder runs.
-    return onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setRestaurant(snap.data() || null));
+    return onSnapshot(doc(db, "restaurants", RESTAURANT_ID), (snap) => setRestaurant(snap.data() || null), onError);
   }, [currentStaff]);
 
   useEffect(() => {
     if (!currentStaff) return;
-    return onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "tables"), (snap) => {
-      setTables(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.number - b.number));
-      setLoading(false);
-    });
+    return onSnapshot(
+      collection(db, "restaurants", RESTAURANT_ID, "tables"),
+      (snap) => {
+        setTables(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.number - b.number));
+        setLoading(false);
+      },
+      onError
+    );
   }, [currentStaff]);
 
   useEffect(() => {
     if (!currentStaff) return;
     const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), where("status", "==", "open"));
-    return onSnapshot(q, (snap) => setOpenOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, (snap) => setOpenOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
   }, [currentStaff]);
 
   useEffect(() => {
@@ -55,27 +65,33 @@ export function OpsDataProvider({ children }) {
     // Order history for the manager's Orders tab — capped at 50, this is a
     // live dashboard, not an export tool.
     const q = query(collection(db, "restaurants", RESTAURANT_ID, "orders"), orderBy("createdAt", "desc"), limit(50));
-    return onSnapshot(q, (snap) => setAllOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, (snap) => setAllOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
   }, [currentStaff]);
 
   useEffect(() => {
     if (!currentStaff) return;
-    return onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "ingredients"), (snap) =>
-      setIngredients(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    return onSnapshot(
+      collection(db, "restaurants", RESTAURANT_ID, "ingredients"),
+      (snap) => setIngredients(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      onError
     );
   }, [currentStaff]);
 
   useEffect(() => {
     if (!currentStaff) return;
-    return onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "staff"), (snap) =>
-      setStaffList(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    return onSnapshot(
+      collection(db, "restaurants", RESTAURANT_ID, "staff"),
+      (snap) => setStaffList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      onError
     );
   }, [currentStaff]);
 
   useEffect(() => {
     if (!currentStaff) return;
-    return onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "dishes"), (snap) =>
-      setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    return onSnapshot(
+      collection(db, "restaurants", RESTAURANT_ID, "dishes"),
+      (snap) => setDishes(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      onError
     );
   }, [currentStaff]);
 
@@ -86,7 +102,7 @@ export function OpsDataProvider({ children }) {
       where("status", "==", "waiting"),
       orderBy("checkedInAt", "asc")
     );
-    return onSnapshot(q, (snap) => setQueueList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, (snap) => setQueueList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
   }, [currentStaff]);
 
   useEffect(() => {
@@ -94,14 +110,16 @@ export function OpsDataProvider({ children }) {
     // Waiter member search (TableMap) and the manager Customers tab both
     // need the full member list — staff can already read it per
     // firestore.rules.
-    return onSnapshot(collection(db, "restaurants", RESTAURANT_ID, "members"), (snap) =>
-      setMembers(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    return onSnapshot(
+      collection(db, "restaurants", RESTAURANT_ID, "members"),
+      (snap) => setMembers(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      onError
     );
   }, [currentStaff]);
 
   return (
     <OpsDataContext.Provider
-      value={{ restaurant, tables, openOrders, allOrders, ingredients, staffList, dishes, queueList, members, loading }}
+      value={{ restaurant, tables, openOrders, allOrders, ingredients, staffList, dishes, queueList, members, loading, error }}
     >
       {children}
     </OpsDataContext.Provider>

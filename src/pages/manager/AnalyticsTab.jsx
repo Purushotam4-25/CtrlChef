@@ -10,12 +10,20 @@ export default function AnalyticsTab() {
   const { T } = useOpsTheme();
   const [sales, setSales] = useState(null);
   const [turnover, setTurnover] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getSalesAnalytics({ days: 7 }).then(setSales);
-    getTableTurnoverStats({ days: 7 }).then(setTurnover);
+    getSalesAnalytics({ days: 7 })
+      .then(setSales)
+      .catch((err) => setError(err.message || "Couldn't load analytics."));
+    // Turnover is a supplementary footnote, not the tab's main content — a
+    // failure here just means that one line doesn't render, not a blocking error.
+    getTableTurnoverStats({ days: 7 })
+      .then(setTurnover)
+      .catch((err) => console.error("getTableTurnoverStats failed:", err));
   }, []);
 
+  if (error) return <div style={{ color: "#f87171" }}>{error}</div>;
   if (!sales) return <div style={{ color: T.faint }}>Loading analytics…</div>;
 
   // Worst (highest %) first — that's the actionable view for a manager.
@@ -30,12 +38,15 @@ export default function AnalyticsTab() {
   const dayData = sales.byDayOfWeek.map((d, i) => ({ label: DAY_LABELS[i], revenue: d.revenue }));
   const maxDay = Math.max(1, ...dayData.map((d) => d.revenue));
   const n = dayData.length;
-  const dots = dayData.map((d, i) => ({ x: (i / (n - 1)) * 300, y: 115 - (d.revenue / maxDay) * 105 }));
+  // n is always 7 today (one point per day of week) — guarded against n<=1
+  // anyway so a future reshape can't divide by zero here.
+  const xStep = n > 1 ? 300 / (n - 1) : 0;
+  const dots = dayData.map((d, i) => ({ x: i * xStep, y: 115 - (d.revenue / maxDay) * 105 }));
   const linePoints = dots.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
   return (
     <div>
-      <div className="mb-3.5 grid grid-cols-[1.2fr_1fr] gap-3.5">
+      <div className="mb-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.2fr_1fr]">
         <Panel className="p-4">
           <div className="mb-3 text-[13px] font-bold" style={{ color: T.header }}>
             Revenue by Hour
@@ -74,7 +85,7 @@ export default function AnalyticsTab() {
         </Panel>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-2 gap-3.5">
+      <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <Panel className="p-4">
           <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
             Top 5 Best-Sellers
@@ -103,7 +114,7 @@ export default function AnalyticsTab() {
         </Panel>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-[1fr_auto] gap-3.5">
+      <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-[1fr_auto]">
         <Panel className="p-4">
           <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
             Food Cost % by Dish
@@ -132,7 +143,7 @@ export default function AnalyticsTab() {
         />
       </div>
 
-      <div className="mb-3.5 grid grid-cols-2 gap-3.5">
+      <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <Panel className="p-4">
           <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
             Sales by Staff
