@@ -23,12 +23,12 @@ yet. The app is not deployed yet.
 
 ## What Still Needs Doing
 
-1. Change Functions from Node 24 to Node 22, then deploy and verify the live
-   app.
-2. Enable the Google sign-in provider in the Firebase console and add the
-   deployed hosting domain to Authorized domains — the code is done (see
-   below) but sign-in fails without this.
-3. Build the manager-only LLM assistant with Gemini → Groq → template fallback.
+1. Deploy. Code's ready (Node 22, readme updated) — just needs `firebase
+   deploy` and the Google provider + authorized domain turned on in the
+   Firebase console.
+2. Build the manager-only LLM assistant with Gemini → Groq → template fallback.
+3. Build notifications (toasts on order-ready/new-order/low-stock + guest
+   order tracking).
 4. Manually click through the new manager CRUD screens, billing/split-bill UI,
    and the new auth screens (Google sign-in, signup, password reset) in a
    browser — none have had a manual pass yet.
@@ -64,6 +64,14 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
   links are logged to the emulator's console output.
 
 ## Session Log
+
+### 2026-07-27 — Deploy prep + two bug fixes
+
+Node 22 in `functions/package.json` (24 isn't a supported deploy target),
+readme updated now that auth and manager CRUD are actually done. Fixed the
+two bugs left from plan 03: a bad `init.json` fetch used to white-screen the
+whole app with no message, and chef tickets could crash on an item missing
+`addedAt`. Nothing left to build here — just needs an actual deploy.
 
 ### 2026-07-27 — Google sign-in, email verification, password reset
 

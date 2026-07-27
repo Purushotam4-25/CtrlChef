@@ -4,6 +4,16 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Deploy prep + bug fixes
+
+Node 22 for functions (24 isn't supported for deploy), readme updated for
+the auth and manager-CRUD work that's since landed. Fixed the last two bugs
+from plan 03: `firebase.js` white-screened on a bad config fetch with no
+message, and chef tickets could crash on a missing `addedAt`. Deploy is
+next — nothing else blocking it.
+
+---
+
 ## 2026-07-27 — Google sign-in, email verification, password reset
 
 Implements PS User Story 2's remaining auth surface. `AuthContext` gained
