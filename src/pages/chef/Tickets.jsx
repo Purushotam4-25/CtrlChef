@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { advanceOrderItemStatus, cancelOrderItem } from "../../lib/api";
 import { fmtElapsed } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
 import { useOpsData } from "../../contexts/OpsDataContext";
+import { useToast } from "../../contexts/ToastContext";
+import { useTransitionWatch } from "../../lib/useTransitionWatch";
 import { Button, Panel } from "../../components/ops/primitives";
 
 // ponytail: elapsed time is measured from when the item was first ordered
@@ -25,6 +27,7 @@ const COLUMNS = [
 export default function Tickets() {
   const { T } = useOpsTheme();
   const { openOrders: orders, tables } = useOpsData();
+  const { notify } = useToast();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(new Set());
   const [, setTick] = useState(0);
@@ -37,6 +40,28 @@ export default function Tickets() {
 
   const tableNumberById = {};
   tables.forEach((t) => (tableNumberById[t.id] = t.number));
+
+  // Flattened once so useTransitionWatch (same hook TableMap uses for
+  // item -> ready) can diff a single itemId-keyed list. A brand-new item
+  // shows up here as an undefined -> "received" transition.
+  const flatItems = useMemo(
+    () => orders.flatMap((o) => o.items.map((i) => ({ ...i, tableId: o.tableId }))),
+    [orders]
+  );
+
+  useTransitionWatch(
+    flatItems,
+    (i) => i.itemId,
+    (i) => i.itemStatus,
+    (item, prev, next) => {
+      if (next !== "received") return;
+      notify({
+        kind: "info",
+        title: `New order — Table ${tableNumberById[item.tableId] ?? "?"}`,
+        body: `${item.dishName} ×${item.qty}`,
+      });
+    }
+  );
 
   const tickets = { received: [], preparing: [], ready: [] };
   orders.forEach((order) => {

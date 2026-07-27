@@ -2,12 +2,14 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider, GuestThemeProvider } from "./contexts/ThemeContext";
 import { GuestDataProvider } from "./contexts/GuestDataContext";
 import { OpsDataProvider } from "./contexts/OpsDataContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import GuestLayout from "./layouts/GuestLayout";
 import OpsLayout from "./layouts/OpsLayout";
 import Home from "./pages/guest/Home";
 import Menu from "./pages/guest/Menu";
 import Queue from "./pages/guest/Queue";
+import TableStatus from "./pages/guest/TableStatus";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import StaffRedirect from "./pages/StaffRedirect";
@@ -30,6 +32,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/queue" element={<Queue />} />
+        <Route path="/table/:tableId" element={<TableStatus />} />
       </Route>
 
       <Route path="/login" element={<Login />} />
@@ -39,9 +42,11 @@ export default function App() {
       <Route
         element={
           <ThemeProvider>
-            <OpsDataProvider>
-              <OpsLayout />
-            </OpsDataProvider>
+            <ToastProvider>
+              <OpsDataProvider>
+                <OpsLayout />
+              </OpsDataProvider>
+            </ToastProvider>
           </ThemeProvider>
         }
       >
