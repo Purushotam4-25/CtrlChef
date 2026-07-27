@@ -4,6 +4,17 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Forecast/Assistant hung silently on a failed call
+
+Neither had error handling — a failed `getStockForecast`/`getSalesAnalytics`
+call left Forecast stuck on "Loading forecast…" forever and Assistant just
+did nothing. Added a real error message to both. Root cause of the actual
+failures they hit was unrelated to this code: several Gen 2 functions
+(Cloud Run under the hood) weren't set to allow public invocation, so calls
+403'd before reaching the function at all — fixed per-function in the Cloud
+Run console (Security tab → Allow public access), not something deploy or
+code can fix on its own.
+
 ## 2026-07-27 — seed.js couldn't actually seed prod, and hung forever trying
 
 Two real bugs, both in `seed.js`. First: `preferRest: true` added on the
