@@ -7,7 +7,7 @@ to 86 an item.
 
 ## Team Name
 
-_TODO: team name_
+_TODO: SyncPoint_
 
 ## Tech Stack
 
@@ -66,8 +66,7 @@ to help write, refactor, and review code for this project.
 
 ## Hosted Application Link
 
-_TODO: not deployed yet — `https://ctrlchef-b8ba2.web.app/` currently
-returns 404. Link goes here once `firebase deploy` has been run._
+_ `https://ctrlchef-b8ba2.web.app/` _
 
 ## How it works
 
