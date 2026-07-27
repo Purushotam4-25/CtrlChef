@@ -4,6 +4,28 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Wired up the Gemini/Groq assistant
+
+`functions/assistant.js` (`askAssistant`, manager-only) answers the three
+fixed questions for real now: Gemini first, Groq if Gemini's slow or errors,
+a plain template if both fail. Pulled the query bodies out of
+`forecast.js`/`analytics.js` into `functions/lib/` so the assistant and the
+existing callables share one source of truth instead of two copies of the
+same aggregation — `test:forecast`/`test:analytics` still pass unchanged.
+
+The spec's model id, `gemini-3-flash`, doesn't exist — 404s against the real
+API. Used `gemini-flash-latest` instead, Google's own alias for the current
+flash-tier model, so it won't rot when the model line moves on. Verified all
+three tiers live against the real emulator + real keys: Gemini currently
+fails because this project's API key has no prepaid credits left, so every
+real call falls through to Groq, which answers correctly and grounded in the
+real numbers; then deliberately broke Groq's model name too and got the
+template tier's canned answers back, confirming the full chain degrades the
+way it's supposed to.
+
+`AssistantTab.jsx` now calls `askAssistant` instead of running the templates
+client-side, with a small Gemini/Groq/Offline badge on each answer.
+
 ## 2026-07-27 — Forecast/Assistant hung silently on a failed call
 
 Neither had error handling — a failed `getStockForecast`/`getSalesAnalytics`

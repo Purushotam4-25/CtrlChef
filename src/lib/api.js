@@ -25,3 +25,4 @@ export const estimateQueueWait = callable("estimateQueueWait");
 export const getTableOrderStatus = callable("getTableOrderStatus");
 export const upsertDish = callable("upsertDish");
 export const createStaffMember = callable("createStaffMember");
+export const askAssistant = callable("askAssistant");

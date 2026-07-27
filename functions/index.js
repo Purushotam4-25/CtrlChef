@@ -16,6 +16,7 @@ const inventory = require("./inventory");
 const queue = require("./queue");
 const menu = require("./menu");
 const staff = require("./staff");
+const assistant = require("./assistant");
 
 exports.addOrderItem = orders.addOrderItem;
 exports.cancelOrderItem = orders.cancelOrderItem;
@@ -34,3 +35,4 @@ exports.estimateQueueWait = queue.estimateQueueWait;
 exports.getTableOrderStatus = queue.getTableOrderStatus;
 exports.upsertDish = menu.upsertDish;
 exports.createStaffMember = staff.createStaffMember;
+exports.askAssistant = assistant.askAssistant;

@@ -8,31 +8,33 @@ Read this first, then check `AGENTS.md` and `plans/`.
 
 CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
-forecasting, analytics, billing (with discounts and bill splitting), the full
-manager dashboard (menu/inventory/tables/staff CRUD, dietary tags, site
-branding), Google sign-in, email verification, signup, password reset, the
-public menu, in-app toast notifications, and guest order tracking are
-working locally.
+forecasting, analytics, the Gemini/Groq/template assistant, billing (with
+discounts and bill splitting), the full manager dashboard
+(menu/inventory/tables/staff CRUD, dietary tags, site branding), Google
+sign-in, email verification, signup, password reset, the public menu,
+in-app toast notifications, and guest order tracking are working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
 actions go through Cloud Functions.
 
 Firebase project: `ctrlchef-b8ba2`. Blaze is enabled. `GEMINI_API_KEY` and
-`GROQ_API_KEY` are saved as Firebase secrets, but the LLM function is not built
-yet. The app is not deployed yet.
+`GROQ_API_KEY` are saved as Firebase secrets and the assistant is wired up
+(Gemini → Groq → template). The app is not deployed yet.
 
 ## What Still Needs Doing
 
 1. Deploy. Code's ready (Node 22, readme updated) — just needs `firebase
    deploy` and the Google provider + authorized domain turned on in the
    Firebase console.
-2. Build the manager-only LLM assistant with Gemini → Groq → template fallback.
+2. Top up the Gemini API key's prepaid credits — it's currently depleted, so
+   the assistant always falls through to Groq. Groq answers fine, but Gemini
+   itself hasn't been demoed live yet. See Session Log below.
 3. Manually click through the new manager CRUD screens, billing/split-bill UI,
    the auth screens (Google sign-in, signup, password reset), and now the
    toasts and `/table/:tableId` tracker too — none have had a manual pass yet.
-4. FCM push on the same three triggers, only if there's slack — the plan
-   calls it a bonus and a permission prompt mid-demo is a real risk.
+4. FCM push on the same three notification triggers, only if there's slack —
+   the plan calls it a bonus and a permission prompt mid-demo is a real risk.
 
 Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
@@ -65,6 +67,21 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
   links are logged to the emulator's console output.
 
 ## Session Log
+
+### 2026-07-27 — Wired up the Gemini/Groq assistant
+
+Built `functions/assistant.js` per `plans/07-ai-assistant.md`: manager-only
+`askAssistant`, `fetchData`/`phrase` split, Gemini → Groq → template. Pulled
+the forecast/analytics query bodies into `functions/lib/` so nothing's
+duplicated; `test:forecast`/`test:analytics` still pass unchanged.
+`gemini-3-flash` from the spec doesn't exist (404), swapped for
+`gemini-flash-latest`. Verified the fallback chain live: Gemini's key is out
+of prepaid credits right now so it always fails over to Groq (which answers
+correctly, grounded in the real numbers), and deliberately breaking Groq too
+confirmed the template tier. `AssistantTab.jsx` calls `askAssistant` now
+instead of running templates client-side, with a Gemini/Groq/Offline badge
+on each answer. Readme's AI Usage section updated. Gemini itself still needs
+a real demo once its credits are topped up — see What Still Needs Doing.
 
 ### 2026-07-27 — Notifications and guest order tracking
 
