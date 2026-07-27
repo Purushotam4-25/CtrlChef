@@ -4,6 +4,34 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Fixed a spoofable queue, a stray client write, and an undercounting Customers tab
+
+Cleaned up findings from two code reviews. Queue check-in was letting anyone
+set their own `checkedInAt`, which is exactly the field the queue is sorted
+by — locked it to `request.time` in the rules and added a test for it. The
+waiter's "No-show" button was writing straight to Firestore instead of going
+through a callable (the only place left doing that); added `cancelQueueEntry`
+and pointed the button at it, with a check that stops you cancelling an
+already-seated entry. The Customers tab was quietly wrong past 50 orders
+restaurant-wide since it was reusing the Orders tab's capped feed for
+per-member totals — gave it its own unbounded closed-orders listener.
+Also closed a small race in member signup where the auto-provisioning
+fallback could beat the real signup write and stamp a generic name instead
+of the one someone typed in.
+
+While in there: ran the full backend suite (63 cases across 9 files) against
+a real emulator to verify the plan-11 changes, since whoever wrote those
+couldn't run them locally (no Java on their machine). Everything passes,
+including the role-cache change in `lib/auth.js` that was the main thing
+worth double-checking. Frontend build's still clean too.
+
+plan 11 itself really is done and matches what the last worklog entry
+already claimed, but I couldn't archive the file to `plans/done/` from this
+worktree — `plans/` is gitignored so it isn't even checked out here.
+Someone with the main checkout should move it and tick the boxes.
+
+---
+
 ## 2026-07-27 — Polish: responsive, error states, a11y, perf (plan 11)
 
 Full pass over `plans/11-polish-responsive-a11y.md`, now archived to
