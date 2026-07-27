@@ -7,7 +7,7 @@ to 86 an item.
 
 ## Team Name
 
-_TODO: SyncPoint_
+SyncPoint
 
 ## Tech Stack
 
@@ -66,7 +66,7 @@ to help write, refactor, and review code for this project.
 
 ## Hosted Application Link
 
-_ `https://ctrlchef-b8ba2.web.app/` _
+`https://ctrlchef-b8ba2.web.app/` 
 
 ## How it works
 
