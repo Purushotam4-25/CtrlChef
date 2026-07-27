@@ -63,9 +63,7 @@ export default function Signup() {
   const card = "w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#35302b] bg-[#211e1b] p-6";
   const header = (
     <div className="mb-1 flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white p-1">
-        <img src={logoIcon} alt="" className="h-full w-full object-contain" />
-      </div>
+      <img src={logoIcon} alt="" className="h-10 w-10 flex-shrink-0 object-contain" />
       <div>
         <div className="text-[15px] font-bold leading-tight">{name}</div>
         <div className="text-[10px] tracking-wide text-[#8a8177]">STAFF PORTAL</div>

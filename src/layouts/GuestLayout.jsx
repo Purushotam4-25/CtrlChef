@@ -37,9 +37,7 @@ export default function GuestLayout() {
         style={{ borderColor: T.border }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
-            <img src={logoIcon} alt="" className="h-full w-full object-contain" />
-          </div>
+          <img src={logoIcon} alt="" className="h-10 w-10 flex-shrink-0 object-contain" />
           <div>
             <div className="text-base font-bold leading-tight">{name}</div>
             <div className="text-[10px] tracking-wide" style={{ color: T.faint }}>

@@ -69,9 +69,7 @@ export default function OpsLayout() {
           className="mb-3.5 flex items-center gap-2.5 border-b pb-4 px-2 pt-1.5"
           style={{ borderColor: T.border }}
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
-            <img src={logoIcon} alt="" className="h-full w-full object-contain" />
-          </div>
+          <img src={logoIcon} alt="" className="h-10 w-10 flex-shrink-0 object-contain" />
           <div>
             <div className="text-[15px] font-bold leading-tight">{name}</div>
             <div className="text-[10px] tracking-wide" style={{ color: T.faint }}>
@@ -143,9 +141,7 @@ export default function OpsLayout() {
         style={{ background: T.sidebar, borderColor: T.border }}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-white p-0.5">
-            <img src={logoIcon} alt="" className="h-full w-full object-contain" />
-          </div>
+          <img src={logoIcon} alt="" className="h-8 w-8 flex-shrink-0 object-contain" />
           <div className="truncate text-[14px] font-bold leading-tight">{name}</div>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
