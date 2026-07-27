@@ -62,6 +62,28 @@ export function Button({ variant = "primary", className = "", style, ...rest }) 
   );
 }
 
+const TOAST_ACCENT = { success: "#16a34a", warn: "#f59e0b" };
+
+export function Toast({ kind = "info", title, body, onDismiss }) {
+  const { T } = useOpsTheme();
+  return (
+    <div
+      onClick={onDismiss}
+      className="w-[300px] cursor-pointer rounded-lg border border-l-4 p-3 shadow-lg transition-opacity hover:opacity-90"
+      style={{ background: T.panel, borderColor: T.borderAlt, borderLeftColor: TOAST_ACCENT[kind] || T.accent }}
+    >
+      <div className="text-[13px] font-bold" style={{ color: T.bright }}>
+        {title}
+      </div>
+      {body && (
+        <div className="mt-0.5 text-[12px]" style={{ color: T.dim }}>
+          {body}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Modal({ open, onClose, children, width = 360 }) {
   const { T } = useOpsTheme();
   if (!open) return null;
