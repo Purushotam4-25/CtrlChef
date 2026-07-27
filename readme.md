@@ -41,23 +41,28 @@ staff management, sales tracking, and analytics all work end to end. The
 manager dashboard has full CRUD on Orders (read-only history), Tables,
 Menu/dishes, Inventory, and Staff, plus dietary tags and site branding.
 
-**Platinum — partially done.** Stock forecasting and operational insights
-are real, computed from actual order history (see below — it's a
-heuristic, not ML, and is labelled as such). The AI assistant tab does
-**not** call an LLM: it answers a fixed set of questions with plain
-templates over real `getStockForecast`/`getSalesAnalytics` data. This was
-a deliberate fallback (see `functions/index.js` / `AssistantTab.jsx`) with
-no Gemini/Groq key wired up yet.
+**Platinum — done.** Stock forecasting and operational insights are real,
+computed from actual order history (see below — it's a heuristic, not ML,
+and is labelled as such). The manager "Assistant" tab answers three fixed,
+grounded questions through a real Gemini call, with an automatic fallback
+to Groq and then to a plain-English template if both APIs are unavailable
+(see AI Usage below and `functions/assistant.js`).
 
 ## AI Usage
 
-**In the product:** none currently. The manager "Assistant" tab looks like
-a chat assistant but is templated JavaScript over real Firestore data — no
-LLM call happens anywhere in `functions/` or `src/`. Disclosed here
-deliberately rather than left to look like more than it is.
+**In the product:** the manager "Assistant" tab (`askAssistant` in
+`functions/assistant.js`) answers three fixed questions — low stock,
+busiest hour, what to 86 — grounded in real `getStockForecast`/
+`getSalesAnalytics` data, never invented numbers. It tries Gemini first,
+falls back to Groq if Gemini is slow or unavailable, and falls back again
+to a plain-English template if both APIs fail — the app never hangs or
+breaks waiting on a third-party API. Each answer shows which tier actually
+answered (Gemini / Groq / Offline) so the fallback is visible, not hidden.
+No LLM key is ever exposed client-side — both calls happen inside the
+Cloud Function, with the keys bound as Firebase secrets.
 
-**During development:** AI coding assistants (Claude) were used to help
-write and review code for this project.
+**During development:** AI coding assistants (Claude) were used throughout
+to help write, refactor, and review code for this project.
 
 ## Hosted Application Link
 
@@ -98,6 +103,16 @@ total ingredient consumption in that window divided by the number of
 days, projected forward against current stock. It's a heuristic, not a
 machine learning model — labelled that way on purpose rather than
 overstating it.
+
+### Assistant
+
+`askAssistant` (`functions/assistant.js`) splits cleanly into `fetchData`
+(Firestore only, reused from the same `functions/lib/` code the forecast and
+analytics callables use, so the assistant can't report a different number
+than the tiles on screen) and `phrase` (Gemini, with a ~5s timeout, then
+Groq, then a plain-English template — each tier only runs if the one before
+it threw or timed out). Manager-only, same `requireStaffRole` guard as every
+other manager callable.
 
 ## Demo Credentials
 
