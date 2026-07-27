@@ -4,6 +4,16 @@ Newest entry first. Keep entries short and factual.
 
 ---
 
+## 2026-07-27 — Login stuck on "Loading…" for a signed-in account with no staff doc
+
+Firestore rules deny reading a staff doc that doesn't exist (the isStaff
+check does a get() on it), which the AuthContext listener had no error
+handler for — so it just spun forever instead of resolving to "no staff".
+Added the error handler. Actual reported case: demo Auth accounts existed
+in prod but their staff docs didn't, most likely from a seed run where only
+`FIRESTORE_EMULATOR_HOST` got unset and not `FIREBASE_AUTH_EMULATOR_HOST`
+too — worth reseeding prod with both unset.
+
 ## 2026-07-27 — Fixed the functions deploy failing on npm ci
 
 First deploy attempt failed all 16 functions with `npm ci` complaining about
