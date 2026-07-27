@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { Menu as MenuIcon, Moon, Sun, X } from "lucide-react";
 import { useGuestData } from "../contexts/GuestDataContext";
 import { useGuestTheme } from "../contexts/ThemeContext";
+import logoIcon from "../assets/logo-icon.png";
 
 export default function GuestLayout() {
   const { restaurant, error } = useGuestData();
@@ -36,11 +37,8 @@ export default function GuestLayout() {
         style={{ borderColor: T.border }}
       >
         <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
-            style={{ background: T.accent }}
-          >
-            <div className="h-4 w-3 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
+            <img src={logoIcon} alt="" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="text-base font-bold leading-tight">{name}</div>

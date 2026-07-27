@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 import { db, RESTAURANT_ID } from "../firebase";
+import logoIcon from "../assets/logo-icon.png";
 
 // Firebase Auth errors are typed — worth telling "wrong password" apart from
 // "the emulator/network is down", which otherwise look identical to the user.
@@ -86,8 +87,8 @@ export default function Login() {
   const card = "w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#35302b] bg-[#211e1b] p-6";
   const header = (
     <div className="mb-1 flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#c2662f]">
-        <div className="h-4 w-3 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white p-1">
+        <img src={logoIcon} alt="" className="h-full w-full object-contain" />
       </div>
       <div>
         <div className="text-[15px] font-bold leading-tight">{name}</div>

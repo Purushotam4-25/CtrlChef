@@ -6,6 +6,7 @@ import { useOpsData } from "../contexts/OpsDataContext";
 import { useOpsTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { useTransitionWatch } from "../lib/useTransitionWatch";
+import logoIcon from "../assets/logo-icon.png";
 
 const NAV_ITEMS = [
   { to: "/waiter", label: "Waiter — Table Map", shortLabel: "Tables", roles: ["waiter", "manager"] },
@@ -68,8 +69,8 @@ export default function OpsLayout() {
           className="mb-3.5 flex items-center gap-2.5 border-b pb-4 px-2 pt-1.5"
           style={{ borderColor: T.border }}
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: T.accent }}>
-            <div className="h-4 w-3 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
+            <img src={logoIcon} alt="" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="text-[15px] font-bold leading-tight">{name}</div>
@@ -142,8 +143,8 @@ export default function OpsLayout() {
         style={{ background: T.sidebar, borderColor: T.border }}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: T.accent }}>
-            <div className="h-3.5 w-2.5 rotate-45 rounded-[60%_60%_60%_5%] bg-white" />
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-white p-0.5">
+            <img src={logoIcon} alt="" className="h-full w-full object-contain" />
           </div>
           <div className="truncate text-[14px] font-bold leading-tight">{name}</div>
         </div>
