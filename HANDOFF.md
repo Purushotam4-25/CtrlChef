@@ -8,9 +8,10 @@ Read this first, then check `AGENTS.md` and `plans/`.
 
 CtrlChef is a Firebase restaurant app where dish availability follows live
 ingredient stock. Orders, kitchen tickets, tables, queue, restocking,
-forecasting, analytics, billing (with discounts and bill splitting), the full
-manager dashboard (menu/inventory/tables/staff CRUD, dietary tags, site
-branding), and the public menu are working locally.
+forecasting, analytics (now with food cost % / COGS per dish and blended),
+billing (with discounts and bill splitting), the full manager dashboard
+(menu/inventory/tables/staff CRUD, dietary tags, site branding), and the
+public menu are working locally.
 
 The frontend is Vite + React. The backend is Firebase Functions and Firestore.
 Guest routes are public; staff routes are role-gated. All state-changing
@@ -44,7 +45,7 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
 - The seed script is deliberately emulator-first. Do not point it at
   production without an explicit production-seeding plan.
-- Current tests: 52 across rules, auth, orders, forecast, analytics,
+- Current tests: 53 across rules, auth, orders, forecast, analytics,
   inventory, and menu CRUD, plus 7 billing cases and a 4-case split-math
   self-check.
 - Existing staff demo accounts are created by `functions/seed.js`.
@@ -52,6 +53,15 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
   document is still required.
 
 ## Session Log
+
+### 2026-07-27 — Food cost % / COGS (plan 12)
+
+Added `costPerUnit` to ingredients (same `upsertIngredient` callable/form as
+plan 08, not a new one) and folded cost into `getSalesAnalytics` — computed
+from each order item's `ingredientsUsed` snapshot, never the live recipe.
+Missing costs get flagged instead of silently reading as 0. New "Food Cost %
+by Dish" panel and a blended stat tile on the Analytics tab. See
+`WORKLOG.md`.
 
 ### 2026-07-27 — Merge billing and manager-CRUD branches
 
