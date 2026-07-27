@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db, RESTAURANT_ID } from "../../firebase";
-import { seatTable } from "../../lib/api";
+import { seatFromQueue } from "../../lib/api";
 import { fmtElapsed } from "../../lib/format";
 import { useOpsData } from "../../contexts/OpsDataContext";
 import { useOpsTheme } from "../../contexts/ThemeContext";
@@ -12,6 +12,7 @@ export default function QueuePanel({ tables, onError }) {
   const { queueList } = useOpsData();
   const [seatingEntry, setSeatingEntry] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
 
   const fittingTablesFor = (partySize) =>
     tables.filter((t) => t.status === "empty" && t.capacity >= partySize).sort((a, b) => a.capacity - b.capacity);
@@ -20,13 +21,27 @@ export default function QueuePanel({ tables, onError }) {
     if (confirming) return;
     setConfirming(true);
     try {
-      await seatTable({ tableId });
-      await updateDoc(doc(db, "restaurants", RESTAURANT_ID, "queue", entry.id), { status: "seated" });
+      // One transactional callable, not two round trips — a failure between
+      // "seat the table" and "mark the entry seated" used to leave the table
+      // occupied with the queue entry stuck waiting forever.
+      await seatFromQueue({ entryId: entry.id, tableId });
       setSeatingEntry(null);
     } catch (e) {
       onError(e.message || "Couldn't seat that party.");
     } finally {
       setConfirming(false);
+    }
+  }
+
+  async function removeEntry(entry) {
+    if (removingId) return;
+    setRemovingId(entry.id);
+    try {
+      await updateDoc(doc(db, "restaurants", RESTAURANT_ID, "queue", entry.id), { status: "cancelled" });
+    } catch (e) {
+      onError(e.message || "Couldn't remove that party.");
+    } finally {
+      setRemovingId(null);
     }
   }
 
@@ -51,15 +66,25 @@ export default function QueuePanel({ tables, onError }) {
               <div className="mt-0.5 text-[11.5px]" style={{ color: T.faint }}>
                 Waiting {entry.checkedInAt ? fmtElapsed(Date.now() - entry.checkedInAt.toDate().getTime()) : "—"}
               </div>
-              <Button
-                variant="primary"
-                className="mt-2 w-full"
-                disabled={fits.length === 0}
-                title={fits.length === 0 ? "No empty table fits this party yet" : ""}
-                onClick={() => setSeatingEntry(entry)}
-              >
-                Seat
-              </Button>
+              <div className="mt-2 flex gap-1.5">
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  disabled={fits.length === 0}
+                  title={fits.length === 0 ? "No empty table fits this party yet" : ""}
+                  onClick={() => setSeatingEntry(entry)}
+                >
+                  Seat
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={removingId === entry.id}
+                  onClick={() => removeEntry(entry)}
+                  title="Remove from queue — didn't show, left, etc."
+                >
+                  No-show
+                </Button>
+              </div>
             </Panel>
           );
         })}
