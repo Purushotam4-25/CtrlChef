@@ -21,10 +21,17 @@ const { computeBill } = require("./lib/billing");
 admin.initializeApp({ projectId: "ctrlchef-b8ba2" });
 const db = admin.firestore();
 // Some networks (corporate proxy, VPN, antivirus doing HTTP/2 inspection)
-// silently swallow the gRPC transport the SDK uses by default — the process
-// just hangs forever with no error. REST works everywhere gRPC does and
-// costs nothing for a one-off script.
-db.settings({ preferRest: true });
+// silently swallow the gRPC transport the SDK uses by default when talking
+// to real Firestore over the internet — the process just hangs forever with
+// no error. REST works everywhere gRPC does and costs nothing for a one-off
+// script. Only turn it on for the real-prod path though: against the local
+// emulator (always on localhost, no proxy/VPN in the way) it breaks the
+// Admin SDK's FIRESTORE_EMULATOR_HOST auto-detection outright, so
+// db.settings({preferRest: true}) makes every emulator write fail trying
+// to load real Google credentials instead.
+if (process.env.SEED_PROD === "true") {
+  db.settings({ preferRest: true });
+}
 
 const RESTAURANT_ID = "demo-restaurant-1";
 
