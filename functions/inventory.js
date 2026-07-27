@@ -77,6 +77,19 @@ exports.upsertIngredient = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "name, unit, and a non-negative lowStockThreshold are required");
   }
 
+  // costPerUnit is optional — an ingredient can exist without one (older
+  // docs, or a manager who skipped it), analytics.js flags that via
+  // missingCostIngredientIds instead of assuming 0. Omit it entirely from
+  // the write when not given, so editing an ingredient without touching
+  // cost doesn't blow away a previously-set value.
+  let costPerUnit;
+  if (request.data.costPerUnit !== undefined && request.data.costPerUnit !== null && request.data.costPerUnit !== "") {
+    costPerUnit = Number(request.data.costPerUnit);
+    if (!Number.isFinite(costPerUnit) || costPerUnit < 0) {
+      throw new HttpsError("invalid-argument", "costPerUnit must be a non-negative number");
+    }
+  }
+
   await requireStaffRole(request, restaurantId, ["manager"]);
 
   const restaurantRef = db.collection("restaurants").doc(restaurantId);
@@ -94,6 +107,7 @@ exports.upsertIngredient = onCall(async (request) => {
       lowStockThreshold,
       currentStock,
       lowStock: computeLowStock({ currentStock, lowStockThreshold }),
+      ...(costPerUnit !== undefined ? { costPerUnit } : {}),
     });
     return { ingredientId: ref.id };
   }
@@ -104,7 +118,13 @@ exports.upsertIngredient = onCall(async (request) => {
     throw new HttpsError("not-found", `Ingredient ${ingredientId} not found`);
   }
   const currentStock = snap.data().currentStock;
-  await ref.update({ name, unit, lowStockThreshold, lowStock: computeLowStock({ currentStock, lowStockThreshold }) });
+  await ref.update({
+    name,
+    unit,
+    lowStockThreshold,
+    lowStock: computeLowStock({ currentStock, lowStockThreshold }),
+    ...(costPerUnit !== undefined ? { costPerUnit } : {}),
+  });
   return { ingredientId };
 });
 

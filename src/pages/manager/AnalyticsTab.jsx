@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getSalesAnalytics, getTableTurnoverStats } from "../../lib/api";
 import { fmtHour, fmtINR } from "../../lib/format";
 import { useOpsTheme } from "../../contexts/ThemeContext";
-import { Panel } from "../../components/ops/primitives";
+import { Panel, StatTile } from "../../components/ops/primitives";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -17,6 +17,14 @@ export default function AnalyticsTab() {
   }, []);
 
   if (!sales) return <div style={{ color: T.faint }}>Loading analytics…</div>;
+
+  // Worst (highest %) first — that's the actionable view for a manager.
+  // Dishes never sold in the window (revenue 0) are excluded, not divided
+  // by zero.
+  const foodCostRows = sales.byDish
+    .filter((d) => d.revenue > 0)
+    .sort((a, b) => b.cost / b.revenue - a.cost / a.revenue);
+  const blendedFoodCostPct = sales.totalRevenue > 0 ? (sales.totalCost / sales.totalRevenue) * 100 : 0;
 
   const maxHour = Math.max(1, ...sales.byHour.map((h) => h.revenue));
   const dayData = sales.byDayOfWeek.map((d, i) => ({ label: DAY_LABELS[i], revenue: d.revenue }));
@@ -93,6 +101,35 @@ export default function AnalyticsTab() {
             </div>
           ))}
         </Panel>
+      </div>
+
+      <div className="mb-3.5 grid grid-cols-[1fr_auto] gap-3.5">
+        <Panel className="p-4">
+          <div className="mb-2.5 text-[13px] font-bold" style={{ color: T.header }}>
+            Food Cost % by Dish
+          </div>
+          {foodCostRows.length === 0 && (
+            <div className="text-[13px]" style={{ color: T.faint }}>
+              No sales with a costed recipe in this window.
+            </div>
+          )}
+          {foodCostRows.map((d) => {
+            const pct = (d.cost / d.revenue) * 100;
+            return (
+              <div key={d.dishId} className="flex justify-between border-b py-1.5 text-[13px]" style={{ borderColor: T.panel2 }}>
+                <span>{d.name}</span>
+                <span className="font-mono" style={{ color: d.missingCost ? T.faint : pct > 35 ? "#f87171" : T.dim }}>
+                  {d.missingCost ? "cost data incomplete" : `${pct.toFixed(1)}%`}
+                </span>
+              </div>
+            );
+          })}
+        </Panel>
+        <StatTile
+          label="BLENDED FOOD COST %"
+          value={`${blendedFoodCostPct.toFixed(1)}%`}
+          valueColor={blendedFoodCostPct > 35 ? "#f87171" : T.accentBright}
+        />
       </div>
 
       <div className="mb-3.5 grid grid-cols-2 gap-3.5">
