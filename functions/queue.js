@@ -79,8 +79,7 @@ exports.estimateQueueWait = onCall(async (request) => {
 // separate calls (seatTable, then a queue update); a failure between them
 // left the table "occupied" with the queue entry stuck "waiting" forever,
 // and nothing detected the mismatch.
-// minInstances keeps one instance warm — a hot-path callable (see plans/11).
-exports.seatFromQueue = onCall({ minInstances: 1 }, async (request) => {
+exports.seatFromQueue = onCall(async (request) => {
   const { restaurantId, entryId, tableId } = request.data;
   if (!restaurantId || !entryId || !tableId) {
     throw new HttpsError("invalid-argument", "restaurantId, entryId and tableId are required");

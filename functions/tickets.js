@@ -21,9 +21,7 @@ const ADVANCE_ROLES = {
 // Called by the chef's screen to move one order item forward one stage:
 // received -> preparing -> ready -> served. Rejects skipping stages and
 // rejects moving backwards.
-// minInstances keeps one instance warm — this is the chef/waiter's
-// most-clicked button (see plans/11).
-exports.advanceOrderItemStatus = onCall({ minInstances: 1 }, async (request) => {
+exports.advanceOrderItemStatus = onCall(async (request) => {
   const { restaurantId, orderId, itemId, newStatus } = request.data;
 
   // Object.hasOwn (not `!ADVANCE_ROLES[newStatus]`) — a plain `[newStatus]`

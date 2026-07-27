@@ -9,9 +9,8 @@ const db = getFirestore();
 // Three small functions, one per transition, each guarded so it can only
 // fire from the state it's supposed to follow.
 
-// Waiter seats a walk-in party. minInstances keeps one instance warm — a
-// hot-path callable (see plans/11).
-exports.seatTable = onCall({ minInstances: 1 }, async (request) => {
+// Waiter seats a walk-in party.
+exports.seatTable = onCall(async (request) => {
   const { restaurantId, tableId } = request.data;
   if (!restaurantId || !tableId) {
     throw new HttpsError("invalid-argument", "restaurantId and tableId are required");
@@ -46,7 +45,7 @@ exports.seatTable = onCall({ minInstances: 1 }, async (request) => {
 // has to be frozen at close time. Before this, the bill was recomputed from
 // the restaurant's CURRENT serviceChargePct/gstPct every time it was
 // displayed, so changing either later silently rewrote every past bill.
-exports.closeOrder = onCall({ minInstances: 1 }, async (request) => {
+exports.closeOrder = onCall(async (request) => {
   const { restaurantId, orderId, discount, paymentMethod } = request.data;
   if (!restaurantId || !orderId) {
     throw new HttpsError("invalid-argument", "restaurantId and orderId are required");
