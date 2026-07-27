@@ -99,14 +99,37 @@ test("nobody can write an order directly, not even a manager", async () => {
 test("anyone can create a queue check-in with no login", async () => {
   const db = testEnv.unauthenticatedContext().firestore();
   await assertSucceeds(
-    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({ partySize: 2, status: "waiting" })
+    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({ name: "Guest", partySize: 2, status: "waiting" })
   );
 });
 
 test("a queue check-in needs a sane party size", async () => {
   const db = testEnv.unauthenticatedContext().firestore();
   await assertFails(
-    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({ partySize: -1, status: "waiting" })
+    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({ name: "Guest", partySize: -1, status: "waiting" })
+  );
+});
+
+test("a queue check-in needs a name under 60 chars", async () => {
+  const db = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({
+      name: "x".repeat(61),
+      partySize: 2,
+      status: "waiting",
+    })
+  );
+});
+
+test("a queue check-in can't carry unexpected extra fields", async () => {
+  const db = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    db.collection("restaurants").doc(RESTAURANT_ID).collection("queue").add({
+      name: "Guest",
+      partySize: 2,
+      status: "waiting",
+      isVip: true,
+    })
   );
 });
 

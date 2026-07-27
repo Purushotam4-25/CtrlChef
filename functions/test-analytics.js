@@ -70,7 +70,7 @@ async function setup() {
   // Never ordered — should still show up in byDish at qty 0, and count as a slow mover.
   await restaurantRef.collection("dishes").doc("dish_b").set({ name: "Dish B", price: 150 });
 
-  await restaurantRef.collection("tables").doc("t1").set({ number: 1, capacity: 4, status: "empty" });
+  await restaurantRef.collection("tables").doc("t1").set({ number: 1, capacity: 4, partySize: 4, status: "empty" });
 
   const now = Date.now();
   const order1CreatedAt = new Date(now - 2 * 24 * 60 * 60 * 1000);
@@ -115,7 +115,7 @@ async function setup() {
   });
 
   // Hand-calculated: dish_a sold 3+2=5 for 300+200=500 revenue.
-  // Turnover for capacity-4 tables: (30 + 50) / 2 = 40 min average, 2 samples.
+  // Turnover for party-of-4 (t1's partySize): (30 + 50) / 2 = 40 min average, 2 samples.
 }
 
 test("getSalesAnalytics with no auth is rejected", async () => {
@@ -154,10 +154,10 @@ test("getTableTurnoverStats matches hand-calculated average", async () => {
   const res = await call("getTableTurnoverStats", { restaurantId: RESTAURANT_ID }, manager.idToken);
   if (!res.result) throw new Error(`expected a result, got ${JSON.stringify(res)}`);
 
-  const cap4 = res.result.byCapacity.find((c) => c.capacity === 4);
-  if (!cap4) throw new Error(`expected a capacity-4 bucket, got ${JSON.stringify(res.result.byCapacity)}`);
-  assertEqual(cap4.sampleCount, 2, "capacity-4 sampleCount");
-  assertEqual(cap4.avgDurationMinutes, 40, "capacity-4 avgDurationMinutes");
+  const party4 = res.result.byPartySize.find((c) => c.partySize === 4);
+  if (!party4) throw new Error(`expected a party-of-4 bucket, got ${JSON.stringify(res.result.byPartySize)}`);
+  assertEqual(party4.sampleCount, 2, "party-of-4 sampleCount");
+  assertEqual(party4.avgDurationMinutes, 40, "party-of-4 avgDurationMinutes");
 });
 
 test("getSalesAnalytics still totals a since-deleted dish, using its snapshotted name", async () => {

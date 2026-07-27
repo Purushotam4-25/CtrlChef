@@ -33,6 +33,7 @@ exports.upsertIngredient = inventory.upsertIngredient;
 exports.deleteIngredient = inventory.deleteIngredient;
 exports.estimateQueueWait = queue.estimateQueueWait;
 exports.getTableOrderStatus = queue.getTableOrderStatus;
+exports.seatFromQueue = queue.seatFromQueue;
 exports.upsertDish = menu.upsertDish;
 exports.createStaffMember = staff.createStaffMember;
 exports.askAssistant = assistant.askAssistant;

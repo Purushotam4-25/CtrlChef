@@ -21,10 +21,13 @@ exports.getSalesAnalytics = onCall(async (request) => {
 });
 
 // Manager-only: average time a table stays open (createdAt -> closedAt),
-// grouped by table capacity — party size itself isn't tracked anywhere in
-// the schema, so capacity is the closest available stand-in grouping. This
-// is a deliberate scope simplification, not a gap: adding real party-size
-// tracking is a separate, bigger schema change.
+// grouped by party size. seatFromQueue (queue.js) writes the real partySize
+// onto the table at seating time — this reads the table's CURRENT partySize
+// as a stand-in for whatever party was seated at each historical closed
+// order, same approximation this function already made for capacity before.
+// A table seated by the plain walk-in seatTable (no queue involved) has no
+// partySize recorded, so its orders are skipped here, same as a
+// since-deleted table already was.
 exports.getTableTurnoverStats = onCall(async (request) => {
   const { restaurantId } = request.data;
   const days = request.data.days === undefined ? 7 : Number(request.data.days);
@@ -47,12 +50,12 @@ exports.getTableTurnoverStats = onCall(async (request) => {
     restaurantRef.collection("tables").get(),
   ]);
 
-  const capacityByTable = {};
+  const partySizeByTable = {};
   tablesSnap.forEach((doc) => {
-    capacityByTable[doc.id] = doc.data().capacity;
+    partySizeByTable[doc.id] = doc.data().partySize;
   });
 
-  const durationsByCapacity = {}; // capacity -> minutes[]
+  const durationsByPartySize = {}; // partySize -> minutes[]
   const allDurations = [];
 
   ordersSnap.forEach((doc) => {
@@ -65,25 +68,25 @@ exports.getTableTurnoverStats = onCall(async (request) => {
     const minutes = (order.closedAt.toMillis() - order.createdAt.toMillis()) / 60000;
     allDurations.push(minutes);
 
-    const capacity = capacityByTable[order.tableId];
-    if (capacity === undefined) return; // table since deleted
-    (durationsByCapacity[capacity] ||= []).push(minutes);
+    const partySize = partySizeByTable[order.tableId];
+    if (partySize === undefined) return; // table since deleted, or never seated via the queue
+    (durationsByPartySize[partySize] ||= []).push(minutes);
   });
 
   const average = (arr) => arr.reduce((sum, n) => sum + n, 0) / arr.length;
 
-  const byCapacity = Object.keys(durationsByCapacity)
+  const byPartySize = Object.keys(durationsByPartySize)
     .map(Number)
     .sort((a, b) => a - b)
-    .map((capacity) => ({
-      capacity,
-      avgDurationMinutes: average(durationsByCapacity[capacity]),
-      sampleCount: durationsByCapacity[capacity].length,
+    .map((partySize) => ({
+      partySize,
+      avgDurationMinutes: average(durationsByPartySize[partySize]),
+      sampleCount: durationsByPartySize[partySize].length,
     }));
 
   return {
     windowDays: days,
-    byCapacity,
+    byPartySize,
     overall: {
       avgDurationMinutes: allDurations.length ? average(allDurations) : 0,
       sampleCount: allDurations.length,

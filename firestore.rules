@@ -107,7 +107,13 @@ service cloud.firestore {
         allow create: if request.resource.data.partySize is number
           && request.resource.data.partySize > 0
           && request.resource.data.partySize <= 20
-          && request.resource.data.status == 'waiting';
+          && request.resource.data.status == 'waiting'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 60
+          // No hasOnly here means a fully public, unauthenticated write could
+          // set arbitrary extra fields on this doc — this locks the shape down.
+          && request.resource.data.keys().hasOnly(['name', 'partySize', 'status', 'checkedInAt']);
         allow update, delete: if isStaff(restaurantId);
       }
     }

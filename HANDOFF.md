@@ -68,6 +68,21 @@ Start with `plans/13-priority-roadmap.md`. Detailed plans live in `plans/`.
 
 ## Session Log
 
+### 2026-07-27 — Closed the queue lifecycle gaps
+
+Plan 05's five open items, all done except the explicitly-optional guest
+live position. `seatFromQueue` replaces the old seatTable-then-updateDoc
+two-call sequence with one transaction, so a partial failure can't leave a
+table occupied with its queue entry stuck waiting forever. It also writes
+real `partySize` onto the table, so `getTableTurnoverStats` now groups by
+actual party size instead of table capacity. Added a no-show button
+(entries could only ever become "seated" before). `estimateQueueWait`
+factors in parties already ahead in line now instead of a flat average.
+Locked down the public queue-create rule with `hasOnly` + name validation —
+it had no check stopping an anonymous write from carrying arbitrary extra
+fields. Killed the hardcoded `~8 min` on the guest home page. See
+`WORKLOG.md` for details.
+
 ### 2026-07-27 — Wired up the Gemini/Groq assistant
 
 Built `functions/assistant.js` per `plans/07-ai-assistant.md`: manager-only

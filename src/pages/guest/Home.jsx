@@ -1,12 +1,37 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useGuestData } from "../../contexts/GuestDataContext";
 import { useGuestTheme } from "../../contexts/ThemeContext";
 import { fmtINR } from "../../lib/format";
+import { estimateQueueWait } from "../../lib/api";
+
+// Table-for-2 is the most common walk-in size — used as a representative
+// estimate for this general "how long's the wait" tile, not tied to any
+// specific party. Real number from the backend's turnover heuristic, same
+// one the queue check-in page shows, not an invented figure.
+const SAMPLE_PARTY_SIZE = 2;
 
 export default function Home() {
   const { restaurant, dishes, queueList } = useGuestData();
   const { T } = useGuestTheme();
   const queueCount = queueList.length;
+  const [waitEstimate, setWaitEstimate] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    estimateQueueWait({ partySize: SAMPLE_PARTY_SIZE }).then((res) => {
+      if (!cancelled) setWaitEstimate(res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const waitLabel = !waitEstimate
+    ? "—"
+    : waitEstimate.available
+    ? "No wait"
+    : `~${Math.round(waitEstimate.estimatedWaitMinutes)} min`;
 
   const available = dishes.filter((d) => d.available);
   const highlights = available.slice(0, 6);
@@ -48,7 +73,7 @@ export default function Home() {
             </div>
             <div>
               <div className="text-[11px] font-semibold tracking-wide" style={{ color: T.faint }}>AVG. WAIT</div>
-              <div className="font-serif text-[26px] font-bold">~8 min</div>
+              <div className="font-serif text-[26px] font-bold">{waitLabel}</div>
             </div>
           </div>
         </div>
