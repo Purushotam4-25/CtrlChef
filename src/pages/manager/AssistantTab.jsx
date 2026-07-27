@@ -12,7 +12,7 @@ const SOURCE_BADGE = {
 const QUESTIONS = [
   { text: "What's low on stock?", intent: "low_stock" },
   { text: "What's tonight's busiest hour?", intent: "busiest_hour" },
-  { text: "What should I 86 if an ingredient runs out?", intent: "what_to_86" },
+  { text: "What should I take off the menu if an ingredient runs out?", intent: "what_to_86" },
 ];
 
 // Gemini -> Groq -> template fallback lives server-side (functions/assistant.js,
