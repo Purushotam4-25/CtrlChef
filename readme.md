@@ -1,9 +1,6 @@
 # CtrlChef
 
-Dish availability is *derived from live ingredient stock*, not manually
-toggled. Order enough paneer dishes and every dish that uses paneer greys
-out automatically, on every screen, in real time — nobody has to remember
-to 86 an item.
+CtrlChef is a full stack restaurant management SaaS web app, helping optimise operations in real time. It covers an automatic menu-inventory management system, a digital menu, queue, order/kitchen tickets, billing with splitting, sales analytics, stock forcasting, and a Gemini/Groq powered assistant for manager insights.
 
 ## Team Name
 
